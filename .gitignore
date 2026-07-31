@@ -18,3 +18,5 @@ benchmark_results.json
 .bench_run2.log
 .bench_hybrid.json
 .bench_vlm_only.json
+.pbsetup.sh
+.pbdl.sh
