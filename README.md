@@ -167,7 +167,7 @@ src/docfusion/
   pipeline.py, cli.py, config.py, anchoring.py
 third_party/                   # upstream projects as git submodules (marker, docling, olmocr)
 scripts/                       # stress_triage.py, compare_topologies.py
-tests/                         # 95 tests incl. a mock vLLM reproducing real 400s and real reply format
+tests/                         # 187 tests incl. a mock vLLM reproducing real 400s and real reply format
 ```
 
 Upstream projects are tracked as **git submodules** so this library evolves with them:
@@ -307,10 +307,10 @@ pip install "docfusion[dev]"
 pytest
 ```
 
-95 tests. The suite generates fixture PDFs and runs a **mock vLLM server** that reproduces real vLLM behaviour — both its rejection of the OpenAI structured-outputs shape *and* olmOCR-2's real YAML-front-matter reply format. That second part matters: an earlier mock returned clean Markdown, so 31 tests passed against a client that would have leaked front matter into every page in production. Fixtures should imitate the dependency, not your expectations of it.
+187 tests, run on Python 3.10–3.14 across Windows and Linux in CI. The suite generates fixture PDFs and runs a **mock vLLM server** that reproduces real vLLM behaviour — both its rejection of the OpenAI structured-outputs shape *and* olmOCR-2's real YAML-front-matter reply format. That second part matters: an earlier mock returned clean Markdown, so 31 tests passed against a client that would have leaked front matter into every page in production. Fixtures should imitate the dependency, not your expectations of it.
 
-Also covered: the retry ladder, rotation correction, salvage-on-exhaustion and text-layer fallback; PDFium thread-safety under 8-way concurrency; and `test_prompt_matches_upstream`, which fails if the submodule's prompt drifts.
+Also covered: the retry ladder, rotation correction, salvage-on-exhaustion and text-layer fallback; PDFium thread-safety under 8-way concurrency; typography/grounding recovery against real ParseBench ground truth; the region router's chart/table discrimination; and `test_prompt_matches_upstream`, which fails if the submodule's prompt drifts.
 
 ## License
 
-DocFusion itself: Apache-2.0. See `docfusion audit` for the full runtime bill of materials.
+DocFusion itself: Apache-2.0. See [LICENSING.md](LICENSING.md) for the full runtime bill of materials, or run `docfusion audit`. See [CHANGELOG.md](CHANGELOG.md) for release history.

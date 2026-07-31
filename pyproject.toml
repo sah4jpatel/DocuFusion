@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docfusion"
-version = "0.2.0"
+version = "0.3.0"
 description = "License-compliant enterprise document intelligence: heuristic triage, Docling, olmOCR-2, and per-domain specialist fusion (tables, charts, formulas), built entirely on Apache-2.0/MIT models"
 readme = "README.md"
 requires-python = ">=3.10"
