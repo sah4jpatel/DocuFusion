@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -162,9 +163,22 @@ class OlmOCRClient:
         warnings: list[str] = []
         last: tuple[PageResponse, list[str], int, int] | None = None
         max_attempts = max(1, min(self.endpoint.max_attempts, len(TEMPERATURE_BY_ATTEMPT)))
+        started = time.monotonic()
+        budget = self.endpoint.page_budget_s
+        attempts_made = 0
 
         for attempt in range(max_attempts):
+            spent = time.monotonic() - started
+            if attempt and budget and spent >= budget:
+                warnings.append(
+                    f"page budget exhausted after {spent:.0f}s and {attempt} attempts; "
+                    f"keeping best answer"
+                )
+                logger.warning("page %d exceeded its %.0fs budget after %d attempts",
+                               page_index, budget, attempt)
+                break
             temperature = TEMPERATURE_BY_ATTEMPT[attempt]
+            attempts_made = attempt + 1
             try:
                 response, is_valid, attempt_warnings, in_tok, out_tok = self._attempt(
                     page, temperature, rotation
@@ -176,6 +190,11 @@ class OlmOCRClient:
 
             warnings.extend(attempt_warnings)
             last = (response, attempt_warnings, in_tok, out_tok)
+            if attempt_warnings:
+                # Retries used to be silent, so a page burning the whole ladder
+                # looked identical to a page that was simply slow.
+                logger.info("page %d attempt %d invalid (%s)", page_index,
+                            attempt + 1, "; ".join(attempt_warnings))
 
             # The model says the page is sideways — re-render and retry once per angle.
             if not response.is_rotation_valid and response.rotation_correction and rotation == 0:
@@ -224,7 +243,7 @@ class OlmOCRClient:
                 markdown=salvaged,
                 degraded=True,
                 note=report.detail or "all attempts invalid; salvaged last response",
-                attempts=max_attempts,
+                attempts=attempts_made or max_attempts,
                 rotation_applied=rotation,
                 warnings=warnings,
                 input_tokens=last[2],
@@ -233,7 +252,8 @@ class OlmOCRClient:
 
         if not self.endpoint.fallback_to_text_layer:
             raise OlmOCRError(
-                f"page {page_index}: all {max_attempts} attempts failed: {'; '.join(warnings)}"
+                f"page {page_index}: all {attempts_made or max_attempts} attempts failed: "
+                f"{'; '.join(warnings)}"
             )
 
         return PageResult(
@@ -242,7 +262,7 @@ class OlmOCRClient:
             degraded=True,
             fallback=True,
             note="VLM unavailable or all attempts failed; fell back to embedded text layer",
-            attempts=max_attempts,
+            attempts=attempts_made or max_attempts,
             warnings=warnings,
         )
 

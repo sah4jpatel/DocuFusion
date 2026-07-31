@@ -134,3 +134,40 @@ class TestFailureHandling:
         ))
         with pytest.raises(OlmOCRError, match="all 1 attempts failed"):
             client.ocr_page(page, 0)
+
+
+class TestPageBudget:
+    """One page must not be able to hold a GPU slot indefinitely.
+
+    Measured on ParseBench layout pages: median page latency 27s, p90 189s, and
+    a single worst-case page consumed 105 minutes — starving the five other
+    workers queued behind it. ``timeout_s`` caps one request; only a budget caps
+    the ladder.
+    """
+
+    def test_budget_stops_the_ladder_and_keeps_the_best_answer(self, page, mock_vllm):
+        # Always invalid, so without a budget this would run all 8 attempts.
+        mock_vllm.reply_queue = [
+            (olmocr_reply(body=f"attempt {i}"), "length") for i in range(8)
+        ]
+        mock_vllm.markdown_reply = olmocr_reply(body="still truncated")
+        client = client_for(mock_vllm, page_budget_s=0.001)
+        result = client.ocr_page(page, 0)
+
+        assert result.attempts <= 2, "budget should cut the ladder short"
+        assert result.markdown, "the best available answer must still be returned"
+        assert result.degraded
+        assert any("budget exhausted" in w for w in result.warnings)
+
+    def test_generous_budget_does_not_interfere(self, page, mock_vllm):
+        mock_vllm.reply_queue = [(olmocr_reply(body="partial"), "length")]
+        mock_vllm.markdown_reply = olmocr_reply(body="# Complete page")
+        result = client_for(mock_vllm, page_budget_s=600).ocr_page(page, 0)
+        assert result.markdown == "# Complete page"
+        assert not result.degraded
+
+    def test_budget_never_prevents_the_first_attempt(self, page, mock_vllm):
+        """Even a zero budget must try once; returning nothing is worse."""
+        result = client_for(mock_vllm, page_budget_s=0.0).ocr_page(page, 0)
+        assert result.markdown
+        assert result.attempts == 1

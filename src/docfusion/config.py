@@ -56,6 +56,13 @@ class VLMEndpoint(BaseModel):
     # a collapse that looks like the model hanging. Measured: a dense
     # enterprise page at 16-way concurrency on one 3090 takes over 180s.
     timeout_s: int = 600
+    # Total wall-clock budget for ONE page across every attempt. timeout_s caps a
+    # single request; without a budget the ladder can multiply it — measured on
+    # ParseBench layout pages, median page latency was 27s, p90 189s and the
+    # worst single page consumed 105 minutes of a GPU slot, starving the batch
+    # behind it. When the budget is spent we keep the best answer we have and
+    # flag it, because a good-enough page now beats a perfect page in an hour.
+    page_budget_s: float = 240.0
 
     # Rendering: olmOCR-2 is trained on longest-side-normalised images, not a DPI.
     target_longest_image_dim: int = TARGET_LONGEST_IMAGE_DIM
