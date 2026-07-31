@@ -138,6 +138,7 @@ class DocFusionPipeline:
             path, fast_pages,
             prefer_docling=self.config.use_docling_tier1,
             enable_ocr=self.config.docling_ocr,
+            device=self.config.docling_device,
         )
         tier2 = self._run_tier2(path, vlm_pages)
 

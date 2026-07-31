@@ -61,8 +61,15 @@ def extract_text_layer(path: str | Path, page_indices: list[int]) -> dict[int, s
             pdf.close()
 
 
-def _build_converter(enable_ocr: bool):
-    """A DocumentConverter with OCR off unless explicitly requested."""
+def _build_converter(enable_ocr: bool, device: str = "cpu"):
+    """A DocumentConverter with OCR off and pinned to a device.
+
+    ``device`` defaults to CPU because Tier 1 usually shares a box with the
+    vLLM server, and vLLM pre-allocates ~90% of VRAM at startup. Docling then
+    competes for the few hundred MB left, and the symptom is not a Docling
+    error — it is Tier-2 requests timing out. Docling's layout and table models
+    are small enough to run on CPU by design; that is the point of the tier.
+    """
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -70,16 +77,27 @@ def _build_converter(enable_ocr: bool):
     options = PdfPipelineOptions()
     options.do_ocr = enable_ocr
     options.do_table_structure = True
+
+    try:
+        from docling.datamodel.accelerator_options import (
+            AcceleratorDevice,
+            AcceleratorOptions,
+        )
+
+        options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice(device))
+    except Exception as exc:  # noqa: BLE001 — older Docling without accelerator options
+        logger.debug("could not pin Docling device to %s: %s", device, exc)
+
     return DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}
     )
 
 
 def extract_with_docling(
-    path: str | Path, page_indices: list[int], enable_ocr: bool = False
+    path: str | Path, page_indices: list[int], enable_ocr: bool = False, device: str = "cpu"
 ) -> dict[int, str]:
     """Structured Markdown per page via Docling (import deferred)."""
-    converter = _build_converter(enable_ocr)
+    converter = _build_converter(enable_ocr, device)
     result = converter.convert(str(path))
     doc = result.document
     out: dict[int, str] = {}
@@ -98,6 +116,7 @@ def tier1_extract(
     page_indices: list[int],
     prefer_docling: bool = True,
     enable_ocr: bool = False,
+    device: str = "cpu",
 ) -> dict[int, str]:
     """Extract Tier-1 pages, degrading to the text layer if Docling fails.
 
@@ -108,7 +127,7 @@ def tier1_extract(
         return {}
     if prefer_docling and docling_available():
         try:
-            return extract_with_docling(path, page_indices, enable_ocr=enable_ocr)
+            return extract_with_docling(path, page_indices, enable_ocr=enable_ocr, device=device)
         except Exception as exc:  # noqa: BLE001
             logger.warning("docling failed on %s (%s); using raw text layer", path, exc)
     return extract_text_layer(path, page_indices)

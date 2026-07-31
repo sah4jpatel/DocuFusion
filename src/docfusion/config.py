@@ -89,6 +89,12 @@ class PipelineConfig(BaseModel):
     use_docling_tier1: bool = Field(
         True, description="Use Docling for Tier-1 extraction when installed; else fall back to the raw text layer."
     )
+    docling_device: str = Field(
+        "cpu",
+        description="Accelerator for Docling's Tier-1 models: cpu | cuda | auto. Defaults to CPU "
+                    "on purpose — colocating Docling with vLLM, which pre-allocates ~90% of VRAM, "
+                    "starves both and shows up as Tier-2 request timeouts, not as a Docling error.",
+    )
     docling_ocr: bool = Field(
         False,
         description="Enable Docling's own OCR engine. Off by default: it pulls RapidOCR/PP-OCR "
