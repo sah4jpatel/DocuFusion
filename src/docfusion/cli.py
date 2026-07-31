@@ -44,10 +44,36 @@ def _build_config(args: argparse.Namespace) -> PipelineConfig:
     return cfg
 
 
+def _print_specialist_bom() -> None:
+    """Specialists declare a licence at registration; show it here.
+
+    They are optional and lazily loaded, so an uninstalled one is listed rather
+    than hidden — the point is that you can see what *would* enter the BOM if
+    you installed it, not only what already has.
+    """
+    try:
+        import docfusion.specialists.charts  # noqa: F401
+        import docfusion.specialists.formulas  # noqa: F401
+        from docfusion.specialists.base import registry_bom
+    except ImportError:
+        return
+
+    rows = registry_bom()
+    if not rows:
+        return
+    print("\n  optional per-domain specialists:")
+    for row in rows:
+        state = "installed" if row["installed"] else "not installed"
+        kinds = ",".join(row["kinds"])
+        print(f"    [{row['licence']:>10}] {row['name']:<14} {kinds:<14} "
+              f"{row['origin']:<24} {state}")
+
+
 def _cmd_audit() -> int:
     res = audit()
     for c in res.bill_of_materials:
         print(f"  [{c.license_class.value:>10}] {c.name:<22} {c.kind:<8} {c.license} ({c.developer})")
+    _print_specialist_bom()
     if res.ok:
         print("\nAUDIT PASSED: all runtime components are enterprise-permissive.")
         return 0

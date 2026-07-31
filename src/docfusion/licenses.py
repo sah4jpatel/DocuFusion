@@ -43,11 +43,27 @@ REGISTRY: dict[str, Component] = {
                   "Datalab", "Revenue/funding caps; NOT deployable internally without a commercial license."),
         Component("surya", "weights", "OpenRAIL-M (modified)", LicenseClass.RESTRICTED,
                   "Datalab", "Marker's default layout/OCR weights; same revenue caps as Chandra."),
+        Component("texify", "weights", "GPL-3.0", LicenseClass.RESTRICTED, "Datalab",
+                  "Copyleft. Capable formula model, but GPL reaches the embedding code, "
+                  "not merely the revenue — unusable in a proprietary pipeline."),
         Component("olmocr-2-7b", "weights", "Apache-2.0", LicenseClass.PERMISSIVE, "Ai2",
                   "e.g. allenai/olmOCR-2-7B-1025-FP8; weights, data and training code all open."),
         Component("docling-layout-heron", "weights", "Apache-2.0 (CDLA-Permissive data)",
                   LicenseClass.PERMISSIVE, "IBM Research", "DocLayNet-family layout model."),
         Component("tableformer", "weights", "MIT", LicenseClass.PERMISSIVE, "IBM Research"),
+        # ---- optional per-domain specialists (see docfusion.specialists) ----
+        Component("deplot", "weights", "Apache-2.0", LicenseClass.PERMISSIVE, "Google Research",
+                  "Chart derendering (Pix2Struct). Reads data points a linearising OCR model "
+                  "can only caption."),
+        Component("table-transformer", "weights", "MIT", LicenseClass.PERMISSIVE, "Microsoft",
+                  "TATR table structure recognition, trained on PubTables-1M."),
+        Component("pix2tex", "weights", "MIT", LicenseClass.PERMISSIVE, "lukas-blecher",
+                  "Formula image to LaTeX."),
+        Component("unimernet", "weights", "Apache-2.0", LicenseClass.PERMISSIVE, "OpenDataLab",
+                  "Stronger formula recognition, but non-US origin; opt-in via "
+                  "DOCFUSION_ENABLE_UNIMERNET=1."),
+        Component("granite-docling", "weights", "Apache-2.0", LicenseClass.PERMISSIVE, "IBM Research",
+                  "258M layout VLM emitting DocTags with bounding boxes."),
         # Docling's optional OCR engine. Apache-2.0, but the weights are fetched
         # from modelscope.cn at first use rather than pinned at install time, so
         # it is deliberately excluded from the default BOM and must be cleared
@@ -65,7 +81,13 @@ DEFAULT_BOM: dict[str, list[str]] = {
 }
 
 # Components docfusion explicitly refuses to route to.
-DENYLIST: frozenset[str] = frozenset({"chandra", "surya"})
+#
+# `texify` is here for a different reason than the others: it is capable and
+# would fit the formula slot, but it is GPL-3.0. Copyleft is a distinct problem
+# from OpenRAIL's revenue cap and, for a library meant to be embedded in
+# proprietary enterprise pipelines, a worse one — it reaches the code, not just
+# the budget.
+DENYLIST: frozenset[str] = frozenset({"chandra", "surya", "texify"})
 
 
 @dataclass
