@@ -86,6 +86,71 @@ Reproduce: `make compare` (or `scripts/compare_topologies.py`).
 
 
 
+
+### ParseBench: charts, formatting and grounding
+
+[ParseBench](https://github.com/run-llama/ParseBench) (LlamaIndex, ~2,000 enterprise pages, fully
+deterministic scoring) measures things olmOCR-Bench does not. Two of its five dimensions are ones a
+Markdown-linearising model scores **structurally zero** on, because olmOCR-2's prompt asks for "the
+plain text representation": it emits no `**bold**`, no headings, and no coordinates.
+
+Both are recoverable from the PDF rather than the model — see
+[`formatting.py`](src/docfusion/formatting.py) and [`grounding.py`](src/docfusion/grounding.py):
+
+| | before | after |
+|---|---:|---:|
+| Semantic formatting (476 pages, 5,997 rules) | **0.0** | **30.2** (micro 33.8) |
+| Formatting marks recovered from styled spans | 44.4% | **74.5%** |
+| Reading order (500 pages, 637 rules) | — | **83.4** |
+
+![ParseBench semantic formatting](docs/chart-parsebench-formatting.svg)
+
+That clears Docling (1.03), MinerU2.5-2509 (4.5) and MarkItDown (0.91), and lands short of
+Chandra-2 (61.4, revenue-capped) and LlamaParse Agentic (85.2, commercial API).
+
+**Where the remaining gap actually is.** Doubling the apply rate only moved the score 29.0 → 30.2,
+which says the loss is not detection. `is_title` is satisfied by bold **only on a standalone line**,
+and olmOCR-2 emits `Population: 2.65 million` as one line — so a correctly detected bold label
+cannot satisfy the rule inline. Closing that means changing document structure to suit a metric,
+which is not a change worth making. Three rule types remain unimplemented and score 0: `is_mark`
+(highlight), `is_code_block` (monospace) and `is_strikeout`.
+
+**Charts are an architectural gap, not a tuning one.** ParseBench asks for exact data points —
+`labels: ["IF", "193 UN Member States"] -> "0.8079"`. olmOCR-2 is trained to emit a figure
+*placeholder*, so it cannot answer, and neither can any other linearising model: Dots.mocr 0.95,
+DeepSeek-OCR-2 1.1, PaddleOCR-VL 0.9. That is what
+[`specialists/`](src/docfusion/specialists/) exists for — see **Model fusion** below.
+
+
+
+## Model fusion: a specialist per domain
+
+One generalist is not the best answer for every region of a page. The page is segmented first
+(from the PDF's own object list — no model, ~1 ms), and each region goes to whatever is best at it.
+
+| region | specialist | licence | origin |
+|---|---|---|---|
+| text, reading order | olmOCR-2-7B | Apache-2.0 | Ai2 (US) |
+| layout, tables | Docling / Granite-Docling-258M | MIT / Apache-2.0 | IBM Research (US) |
+| table structure | Table Transformer (TATR) | MIT | Microsoft (US) |
+| charts, figures | DePlot (Pix2Struct) | Apache-2.0 | Google Research (US) |
+| formulas | pix2tex | MIT | independent (EU) |
+| formulas (opt-in) | UniMERNet | Apache-2.0 | OpenDataLab (CN) |
+| typography, grounding | deterministic, no model | Apache-2.0 | this project |
+
+Every slot is Apache-2.0 or MIT: no revenue cap, no copyleft. Specialists are optional and lazily
+loaded — an uninstalled one is simply not used, and the region keeps the generalist's text. Fusion
+**appends**, never replaces, so enabling it can add information but cannot lose any.
+
+`docfusion audit` lists every specialist with its licence, installed or not.
+
+Two exclusions worth naming, because both are otherwise strong candidates:
+**texify is GPL-3.0** — copyleft reaches the embedding code, not merely the revenue, which is a
+worse problem than OpenRAIL's cap for a library meant to sit inside a proprietary pipeline. And
+**MinerU is "Apache-2.0 plus additional terms"**, which is not Apache-2.0. Both are denylisted or
+excluded; see [LICENSING.md](LICENSING.md).
+
+
 ## Repository layout
 
 ```

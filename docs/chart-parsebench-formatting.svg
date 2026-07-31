@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 438" width="880" height="438" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+<text x="0" y="24" font-size="17" font-weight="600" fill="#0f766e">ParseBench — semantic formatting</text>
+<text x="0" y="46" font-size="12.5" fill="#94a3b8">DocFusion measured here (476 pages, RTX 3090); peers are published leaderboard figures. Chandra shown amber: revenue-capped licence.</text>
+<line x1="210.0" y1="66" x2="210.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="210.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">0</text>
+<line x1="330.0" y1="66" x2="330.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="330.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">20</text>
+<line x1="450.0" y1="66" x2="450.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="450.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">40</text>
+<line x1="570.0" y1="66" x2="570.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="570.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">60</text>
+<line x1="690.0" y1="66" x2="690.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="690.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">80</text>
+<line x1="810.0" y1="66" x2="810.0" y2="408" stroke="#cbd5e133" stroke-width="1"/>
+<text x="810.0" y="424" font-size="10.5" fill="#94a3b8" text-anchor="middle">100</text>
+<text x="200" y="88" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">LlamaParse Agentic</text>
+<rect x="210" y="77" width="511.4" height="18" rx="2.5" fill="#64748b"/>
+<text x="728.4" y="90" font-size="11.5" fill="#94a3b8" font-weight="400">85.2</text>
+<text x="200" y="118" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">Gemma-4-31B-it</text>
+<rect x="210" y="107" width="415.8" height="18" rx="2.5" fill="#64748b"/>
+<text x="632.8" y="120" font-size="11.5" fill="#94a3b8" font-weight="400">69.3</text>
+<text x="200" y="148" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">Qwen3-VL-8B</text>
+<rect x="210" y="137" width="385.4" height="18" rx="2.5" fill="#64748b"/>
+<text x="602.4" y="150" font-size="11.5" fill="#94a3b8" font-weight="400">64.2</text>
+<text x="200" y="178" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">Chandra-ocr-2</text>
+<rect x="210" y="167" width="368.4" height="18" rx="2.5" fill="#b45309"/>
+<text x="585.4" y="180" font-size="11.5" fill="#94a3b8" font-weight="400">61.4</text>
+<text x="200" y="208" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">MinerU2.5-Pro</text>
+<rect x="210" y="197" width="344.9" height="18" rx="2.5" fill="#64748b"/>
+<text x="561.9" y="210" font-size="11.5" fill="#94a3b8" font-weight="400">57.5</text>
+<text x="200" y="238" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">PyMuPDF4LLM</text>
+<rect x="210" y="227" width="267.8" height="18" rx="2.5" fill="#64748b"/>
+<text x="484.8" y="240" font-size="11.5" fill="#94a3b8" font-weight="400">44.6</text>
+<text x="200" y="268" font-size="12.5" fill="#94a3b8" font-weight="600" text-anchor="end">DocFusion</text>
+<rect x="210" y="257" width="181.2" height="18" rx="2.5" fill="#0f766e"/>
+<text x="398.2" y="270" font-size="11.5" fill="#94a3b8" font-weight="600">30.2</text>
+<text x="200" y="298" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">MinerU2.5-2509</text>
+<rect x="210" y="287" width="27.0" height="18" rx="2.5" fill="#64748b"/>
+<text x="244.0" y="300" font-size="11.5" fill="#94a3b8" font-weight="400">4.5</text>
+<text x="200" y="328" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">GLM-OCR</text>
+<rect x="210" y="317" width="13.8" height="18" rx="2.5" fill="#64748b"/>
+<text x="230.8" y="330" font-size="11.5" fill="#94a3b8" font-weight="400">2.3</text>
+<text x="200" y="358" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">Docling-models</text>
+<rect x="210" y="347" width="6.2" height="18" rx="2.5" fill="#64748b"/>
+<text x="223.2" y="360" font-size="11.5" fill="#94a3b8" font-weight="400">1.0</text>
+<text x="200" y="388" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">MarkItDown</text>
+<rect x="210" y="377" width="5.5" height="18" rx="2.5" fill="#64748b"/>
+<text x="222.5" y="390" font-size="11.5" fill="#94a3b8" font-weight="400">0.9</text>
+</svg>
