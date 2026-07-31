@@ -1,14 +1,13 @@
 import json
 
-import pypdfium2 as pdfium
 import pytest
 from openai import BadRequestError, OpenAI
 from pydantic import BaseModel
 
 from docfusion import PipelineConfig, audit
-from docfusion.anchoring import anchored_prompt_for, ANCHOR_HEADER
+from docfusion.anchoring import ANCHOR_HEADER, anchored_prompt_for
+from docfusion.cli import main as cli_main
 from docfusion.engines.olmocr_client import (
-    OlmOCRClient,
     detect_repetition_loop,
     truncate_repetition,
 )
@@ -20,7 +19,6 @@ from docfusion.services.vllm_service import (
     validate_against_schema,
 )
 from docfusion.triage.heuristics import Route, triage_pdf
-from docfusion.cli import main as cli_main
 
 
 # ---------------------------------------------------------------- licensing
@@ -263,7 +261,8 @@ class TestBatchAndTier1Only:
 
     def test_batch_skip_existing(self, tmp_path, simple_pdf, mock_vllm, capsys):
         in_dir, out_dir = tmp_path / "in", tmp_path / "out"
-        in_dir.mkdir(); out_dir.mkdir()
+        in_dir.mkdir()
+        out_dir.mkdir()
         (in_dir / "a.pdf").write_bytes(simple_pdf.read_bytes())
         (out_dir / "a.md").write_text("existing")
         rc = cli_main(["batch", str(in_dir), str(out_dir), "--skip-existing",

@@ -20,8 +20,18 @@ OLMOCR_MODEL_BF16 = "allenai/olmOCR-2-7B-1025"
 class TriageThresholds(BaseModel):
     """Tunable thresholds for the heuristic (model-free) triage pass.
 
-    A page escalates to Tier 2 (VLM) if ANY trigger fires. Defaults are
-    calibrated against olmOCR-Bench; see ``docfusion calibrate``.
+    A page escalates to Tier 2 (VLM) if ANY trigger fires.
+
+    These defaults are hand-chosen, not fitted. Their *behaviour* has been
+    measured — over all 1403 olmOCR-Bench pages they escalate 100% of old
+    scans, 65% of arXiv math and 30% of clean multi-column prose, which is the
+    right shape — but the numbers themselves are judgement calls, and the
+    corpus they were measured on is adversarial by construction.
+
+    Escalation rate is your GPU bill, so tune them against your own documents:
+    ``scripts/stress_triage.py`` reports the rate and which trigger fired, and
+    ``scripts/compare_topologies.py`` measures what routing a page to Tier 1
+    costs in accuracy.
     """
 
     min_text_chars: int = Field(120, description="Below this the text layer is unreliable (likely a scan).")

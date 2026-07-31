@@ -79,9 +79,9 @@ def make_vllm_service():
     from typing import Annotated, List  # noqa: F401
 
     import PIL.Image
-    from openai import APITimeoutError, OpenAI, RateLimitError
     from marker.schema.blocks import Block
     from marker.services import BaseService
+    from openai import APITimeoutError, OpenAI, RateLimitError
 
     class VLLMService(BaseService):
         vllm_base_url: Annotated[str, "OpenAI-compatible vLLM endpoint, no trailing slash."] = (

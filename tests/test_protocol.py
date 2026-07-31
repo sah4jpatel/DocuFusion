@@ -128,8 +128,9 @@ class TestFrontMatter:
 
 class TestRendering:
     def test_longest_side_is_normalised(self, simple_pdf):
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         pdf = pdfium.PdfDocument(str(simple_pdf))
         try:
@@ -142,8 +143,9 @@ class TestRendering:
         assert max(img.size) == pytest.approx(1288, abs=2)
 
     def test_rotation_swaps_dimensions(self, simple_pdf):
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         pdf = pdfium.PdfDocument(str(simple_pdf))
         try:

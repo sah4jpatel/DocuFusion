@@ -29,7 +29,6 @@ from typing import Any
 import pypdfium2 as pdfium
 
 from docfusion.config import VLMEndpoint
-from docfusion.pdfium_lock import pdfium_guard
 from docfusion.engines.olmocr_protocol import (
     DEFAULT_REPETITION_NGRAM_SIZE,
     FRONT_MATTER_GUIDED_REGEX,
@@ -42,6 +41,7 @@ from docfusion.engines.olmocr_protocol import (
     render_page_png,
     truncate_degenerate,
 )
+from docfusion.pdfium_lock import pdfium_guard
 
 logger = logging.getLogger(__name__)
 
