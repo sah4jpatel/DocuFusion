@@ -38,6 +38,17 @@ TYPICAL_PAGE_TOKENS = 4096
 MIN_NUM_SEQS = 4
 MAX_NUM_SEQS = 256
 
+# On a card that also drives a desktop — WSL2/WDDM, or any workstation with a
+# monitor attached — the display driver may evict VRAM that another process has
+# claimed, paging it to system RAM. There is no error: throughput simply
+# collapses. Measured here on an RTX 3090 under WSL2, same model and same
+# client, only the utilisation changed:
+#     --gpu-memory-utilization 0.87  ->  ~3.5 tok/s per stream, GPU 16% busy
+#     --gpu-memory-utilization 0.80  ->  ~47  tok/s per stream, GPU 92% busy
+# It is also load-dependent, so it passes in a quiet test and fails later.
+SHARED_DISPLAY_MAX_UTILIZATION = 0.80
+DEDICATED_UTILIZATION = 0.90
+
 
 @dataclass
 class GPU:
@@ -65,6 +76,7 @@ class ServingPlan:
     tensor_parallel_size: int = 1
     max_num_seqs: int = MAX_NUM_SEQS
     kv_cache_gb: float = 0.0
+    shared_display: bool = False
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -111,6 +123,21 @@ def concurrency_for(
     return max(MIN_NUM_SEQS, min(MAX_NUM_SEQS, int(tokens // typical_page_tokens)))
 
 
+def shares_gpu_with_display() -> bool:
+    """True when the GPU probably also drives a desktop.
+
+    WSL2 always does — the Windows compositor owns the card and CUDA is a
+    guest. Detected from ``/proc/version`` rather than by probing the driver,
+    because the failure this guards against is silent and we would rather be
+    conservative than fast.
+    """
+    try:
+        with open("/proc/version", encoding="utf-8", errors="replace") as handle:
+            return "microsoft" in handle.read().lower()
+    except OSError:
+        return False
+
+
 def detect_gpus() -> list[GPU]:
     """Enumerate NVIDIA GPUs. Returns [] when none are visible."""
     if shutil.which("nvidia-smi") is None:
@@ -149,10 +176,21 @@ def recommend_model(gpu: GPU) -> tuple[str, str]:
     return OLMOCR_MODEL_BF16, "none"
 
 
-def plan_serving(gpus: list[GPU] | None = None, requested_model: str | None = None) -> ServingPlan:
+def plan_serving(
+    gpus: list[GPU] | None = None,
+    requested_model: str | None = None,
+    shared_display: bool | None = None,
+) -> ServingPlan:
     """Produce a serving plan, or explain why this machine cannot serve olmOCR-2."""
     gpus = detect_gpus() if gpus is None else gpus
     plan = ServingPlan(gpus=gpus)
+
+    if shared_display is None:
+        shared_display = shares_gpu_with_display()
+    plan.shared_display = shared_display
+    plan.gpu_memory_utilization = (
+        SHARED_DISPLAY_MAX_UTILIZATION if shared_display else DEDICATED_UTILIZATION
+    )
 
     if not gpus:
         plan.errors.append(
@@ -204,6 +242,15 @@ def plan_serving(gpus: list[GPU] | None = None, requested_model: str | None = No
         )
 
     plan.max_num_seqs = concurrency_for(kv_gb)
+
+    if shared_display:
+        plan.warnings.append(
+            f"This GPU also drives a display (WSL2/WDDM), so utilisation is capped at "
+            f"{SHARED_DISPLAY_MAX_UTILIZATION:.2f}. Claiming more lets the display driver page "
+            f"the KV cache to system RAM: measured here, 0.87 gave ~3.5 tok/s per stream at 16% "
+            f"GPU busy, while 0.80 gave ~47 tok/s at 92%. There is no error when it happens, and "
+            f"it only bites once the desktop is busy."
+        )
 
     if len(gpus) > 1 and all(g.name == primary.name for g in gpus):
         plan.warnings.append(

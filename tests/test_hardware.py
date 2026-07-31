@@ -127,3 +127,32 @@ class TestConcurrencySizing:
         plan = plan_serving([RTX3090])
         assert plan.kv_cache_gb > 0
         assert plan.max_num_seqs >= 4
+
+
+class TestSharedDisplay:
+    """A GPU that also drives a desktop must not be filled to the brim.
+
+    WDDM will page a CUDA process's memory out to system RAM when the compositor
+    wants VRAM, with no error and no log line — throughput just collapses.
+    Measured on this machine: 0.87 utilisation gave ~3.5 tok/s per stream at 16%
+    GPU busy; 0.80 gave ~47 tok/s at 92%. It is load-dependent, so it passes on a
+    quiet desktop and fails later under real use.
+    """
+
+    def test_shared_display_caps_utilisation(self):
+        plan = plan_serving([RTX3090], shared_display=True)
+        assert plan.gpu_memory_utilization == 0.80
+        assert plan.shared_display
+
+    def test_dedicated_gpu_uses_full_budget(self):
+        plan = plan_serving([L40S], shared_display=False)
+        assert plan.gpu_memory_utilization == 0.90
+        assert not plan.shared_display
+
+    def test_shared_display_is_explained_not_silent(self):
+        plan = plan_serving([RTX3090], shared_display=True)
+        assert any("display" in w and "tok/s" in w for w in plan.warnings), plan.warnings
+
+    def test_cap_reaches_the_serve_args(self):
+        args = plan_serving([RTX3090], shared_display=True).as_vllm_args()
+        assert args[args.index("--gpu-memory-utilization") + 1] == "0.80"
