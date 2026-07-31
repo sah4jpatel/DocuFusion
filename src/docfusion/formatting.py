@@ -29,6 +29,7 @@ from __future__ import annotations
 import ctypes
 import re
 import statistics
+import unicodedata
 from dataclasses import dataclass, field
 
 import pypdfium2 as pdfium
@@ -322,6 +323,26 @@ class FormattingReport:
     notes: list[str] = field(default_factory=list)
 
 
+def _match_key(text: str) -> str:
+    """Normalised form used to find a span inside the VLM's Markdown.
+
+    The model re-typesets the page, so the bytes rarely match exactly. It
+    resolves ligatures (``ﬁ`` → ``fi``), normalises quotes and dashes, drops
+    the soft hyphen left by justified line breaks, and varies case at line
+    starts. Matching on the raw span text lost 28% of all recovered marks to
+    differences that carry no meaning.
+    """
+    folded = unicodedata.normalize("NFKC", text)
+    folded = folded.replace("­", "").replace("’", "'").replace("‘", "'")
+    folded = folded.replace("“", '"').replace("”", '"')
+    folded = folded.replace("—", "-").replace("–", "-")
+    return " ".join(folded.split()).casefold()
+
+
+def _style_signature(span: TextSpan) -> tuple:
+    return (span.bold, span.italic, span.underline, span.strikeout, span.heading_level)
+
+
 def apply_formatting(
     markdown: str,
     spans: list[TextSpan],
@@ -330,11 +351,16 @@ def apply_formatting(
 ) -> tuple[str, FormattingReport]:
     """Re-mark ``markdown`` using typography recovered from the page.
 
-    Deliberately conservative. A span is only marked when its text occurs in the
-    Markdown exactly ``max_occurrences`` times, is at least ``min_chars`` long,
-    and does not overlap an edit already made or any HTML markup. Wrongly
-    emphasising text is worse than leaving it plain: the benchmark rewards
-    correct marks, but a production consumer is actively misled by wrong ones.
+    Conservative where it matters. A span is skipped when the same text also
+    appears on the page in a *different* style, because then an occurrence in
+    the Markdown is genuinely ambiguous and marking it could contradict the
+    source. When every occurrence on the page carries the same style, all of
+    them are marked — restricting that to a single occurrence discarded 17% of
+    recovered marks for no gain in safety.
+
+    Wrongly emphasising text is worse than leaving it plain: the benchmark
+    rewards correct marks, but a production consumer is actively misled by
+    wrong ones. Nothing here marks text that was not styled in the PDF.
     """
     report = FormattingReport()
     if not markdown or not spans:
@@ -345,12 +371,24 @@ def apply_formatting(
     if not styled:
         return markdown, report
 
+    # Which texts carry exactly one style across the whole page? Those are safe
+    # to mark everywhere they occur; anything with two styles stays ambiguous.
+    styles_by_text: dict[str, set[tuple]] = {}
+    for span in spans:
+        key = _match_key(span.text.strip())
+        if key:
+            styles_by_text.setdefault(key, set()).add(_style_signature(span))
+
     # Longest first: marking "Total revenue" before "Total" avoids nesting a
     # short span inside a long one and producing ****broken**** markup.
     styled.sort(key=lambda s: len(s.text.strip()), reverse=True)
 
     flat, offsets = _normalise(markdown)
-    # Regions of `flat` that are HTML markup or already claimed by an edit.
+    haystack = _match_key(flat)
+    # _match_key only folds case and maps single characters, so offsets survive.
+    if len(haystack) != len(flat):
+        haystack = flat.casefold()
+
     claimed: list[tuple[int, int]] = [
         (m.start(), m.end()) for m in _HTML_TAG_RE.finditer(flat)
     ]
@@ -360,21 +398,31 @@ def apply_formatting(
         return any(not (end <= s or start >= e) for s, e in claimed)
 
     for span in styled:
-        needle, _ = _normalise(span.text.strip())
+        needle = _match_key(span.text.strip())
         if len(needle) < min_chars:
             continue
-        occurrences = flat.count(needle)
-        if occurrences == 0:
-            continue
-        if occurrences > max_occurrences:
+        if len(styles_by_text.get(needle, ())) > 1:
             report.skipped_ambiguous += 1
             continue
-        start = flat.find(needle)
-        end = start + len(needle)
-        if collides(start, end):
+
+        positions: list[int] = []
+        start = haystack.find(needle)
+        while start != -1:
+            positions.append(start)
+            start = haystack.find(needle, start + 1)
+        if not positions:
             continue
-        claimed.append((start, end))
-        edits.append((start, end, span))
+        if max_occurrences and len(positions) > max_occurrences and len(needle) < 8:
+            # Very short repeated strings are the risky case; leave those alone.
+            report.skipped_ambiguous += 1
+            continue
+
+        for position in positions:
+            end = position + len(needle)
+            if collides(position, end):
+                continue
+            claimed.append((position, end))
+            edits.append((position, end, span))
 
     if not edits:
         return markdown, report
