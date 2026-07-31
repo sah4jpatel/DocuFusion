@@ -1,5 +1,10 @@
 # DocFusion
 
+[![CI](https://github.com/sah4jpatel/DocuFusion/actions/workflows/ci.yml/badge.svg)](https://github.com/sah4jpatel/DocuFusion/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Weights](https://img.shields.io/badge/model%20weights-Apache--2.0%20%2F%20MIT-brightgreen)](LICENSING.md)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+
 License-compliant enterprise document intelligence. Combines three open ecosystems — **Marker** (Apache-2.0 harness), **IBM Docling** (MIT deterministic pipeline), and **Ai2 olmOCR** (Apache-2.0 VLM) — while keeping every *model weight* in the runtime BOM enterprise-permissive. The OpenRAIL-M-restricted Chandra/Surya weights are explicitly denylisted and can never enter the pipeline.
 
 ```
@@ -42,6 +47,8 @@ Everything below was produced in this repo against a live `allenai/olmOCR-2-7B-1
 
 53 pages/sec, no crashes, median 8.5 ms/page. Note that **olmOCR-Bench is a deliberately adversarial corpus** — it was curated from the cases OCR systems fail. The "~80% of pages stay on Tier 1" figure often quoted for this architecture is not what a hard corpus produces; ordinary business paperwork escalates far less. Run `docfusion triage` over your own documents before budgeting GPUs, because the escalation rate *is* the GPU bill.
 
+![Triage escalation by category](docs/chart-triage-escalation.svg)
+
 The routing has the right shape: every old scan escalates, most math escalates, and clean multi-column prose mostly does not.
 
 ### Does the pipeline query olmOCR-2 correctly?
@@ -72,6 +79,8 @@ Four things worth taking from this:
 2. **Hybrid strictly dominates Tier-1-only** — more accurate *and* faster. The "cheap" deterministic tier is not cheaper here: Docling on CPU runs ~3.2 s/page, slower per page than offloading to a GPU that would otherwise sit idle. The oft-quoted "Docling does 2.1 pages/s" assumes Docling gets a GPU, and on a single-GPU box it cannot have one — vLLM has already claimed the VRAM.
 3. **Docling earns its place in Tier 1**: 74.2 vs 53.4 against the raw text layer, and on tables **61.3 vs 0.1**. A text layer emits no table structure whatsoever, so every table test fails.
 4. **Triage is under-escalating on tables** (78.2 hybrid vs 84.8 all-VLM). For table-heavy corpora, lower `max_path_objects` to buy accuracy with GPU time.
+
+![olmOCR-Bench topologies](docs/chart-olmocr-topologies.svg)
 
 Reproduce: `make compare` (or `scripts/compare_topologies.py`).
 
