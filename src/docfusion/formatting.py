@@ -328,6 +328,69 @@ class FormattingReport:
     notes: list[str] = field(default_factory=list)
 
 
+def merge_adjacent_spans(spans: list[TextSpan], gap_ratio: float = 0.6) -> list[TextSpan]:
+    """Join same-style spans that sit side by side on one baseline.
+
+    A title is often drawn as several text runs — kerning pairs, a colour
+    change, a font subset boundary — so "Meeting Notice and Voting Roadmap"
+    arrives as three spans. Marking each separately produced
+    ``Meeting Notice and # Voting # Roadmap``: the heading marker inserted
+    mid-line, three times. Merging first means one span, one mark.
+    """
+    if not spans:
+        return spans
+
+    # Group into lines *first*. Sorting straight by vertical centre scrambles
+    # reading order, because a word with a descender ("Meetin(g)") has a taller
+    # box and therefore a lower centre than its neighbours on the same line —
+    # so "Meeting Notice and Voting Roadmap" sorted as "Notice and", "Roadmap",
+    # "Meeting", "Voting" and nothing adjacent ever met.
+    lines: list[list[TextSpan]] = []
+    for span in sorted(spans, key=lambda s: (-s.y1, s.x0)):
+        placed = False
+        for line in lines:
+            reference = line[0]
+            tolerance = max(reference.size, reference.height, 1.0) * 0.5
+            if abs(span.y1 - reference.y1) <= tolerance:
+                line.append(span)
+                placed = True
+                break
+        if not placed:
+            lines.append([span])
+
+    merged: list[TextSpan] = []
+    for line in lines:
+        current: TextSpan | None = None
+        for span in sorted(line, key=lambda s: s.x0):
+            if (
+                current is not None
+                and _style_signature(current) == _style_signature(span)
+                and -1.0 <= span.x0 - current.x1 <= max(current.size, 1.0) * gap_ratio
+            ):
+                joiner = "" if current.text.endswith(" ") or span.text.startswith(" ") else " "
+                current.text = f"{current.text}{joiner}{span.text}"
+                current.x1 = max(current.x1, span.x1)
+                current.y0 = min(current.y0, span.y0)
+                current.y1 = max(current.y1, span.y1)
+                continue
+            current = TextSpan(
+                text=span.text, x0=span.x0, y0=span.y0, x1=span.x1, y1=span.y1,
+                font=span.font, size=span.size, bold=span.bold, italic=span.italic,
+                underline=span.underline, strikeout=span.strikeout,
+                heading_level=span.heading_level,
+            )
+            merged.append(current)
+    return merged
+
+
+def _at_line_start(text: str, position: int) -> bool:
+    """True when only whitespace separates ``position`` from the line start."""
+    index = position - 1
+    while index >= 0 and text[index] in " \t":
+        index -= 1
+    return index < 0 or text[index] == "\n"
+
+
 def _match_key(text: str) -> str:
     """Normalised form used to find a span inside the VLM's Markdown.
 
@@ -371,6 +434,7 @@ def apply_formatting(
     if not markdown or not spans:
         return markdown, report
 
+    spans = merge_adjacent_spans(spans)
     styled = [s for s in spans if s.styled and len(s.text.strip()) >= min_chars]
     report.spans_considered = len(styled)
     if not styled:
@@ -439,10 +503,17 @@ def apply_formatting(
         original_start = offsets[start]
         original_end = offsets[end - 1] + 1
         chunk = result[original_start:original_end]
-        if span.heading_level:
+        if span.heading_level and _at_line_start(result, original_start):
             hashes = "#" * span.heading_level
             replacement = f"{hashes} {chunk.strip()}"
             report.headings += 1
+        elif span.heading_level:
+            # A "#" only means heading at the start of a line. Inserted mid-line
+            # it is literal text, and the output reads
+            # "Meeting Notice and # Voting # Roadmap". Bold is valid inline and
+            # is what the heading would have conveyed anyway.
+            replacement = f"**{chunk}**"
+            report.bold += 1
         else:
             replacement = _wrap(chunk, span)
         result = result[:original_start] + replacement + result[original_end:]

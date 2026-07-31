@@ -188,3 +188,78 @@ class TestPipelineIntegration:
         result = DocFusionPipeline(cfg).convert(styled_pdf)
         assert result.formatting_marks_applied == 0
         assert result.markdown.count("**") == 2
+
+
+class TestHeadingPlacement:
+    """A '#' is only a heading at the start of a line.
+
+    Real output before this fix read:
+        Meeting Notice and # Voting # Roadmap
+    because the title was drawn as three text runs and each was marked
+    separately, inserting the marker mid-line three times. That is worse than
+    leaving the text plain.
+    """
+
+    def test_heading_marker_is_never_inserted_mid_line(self):
+        span = TextSpan(text="Voting Roadmap", x0=0, y0=0, x1=90, y1=12,
+                        size=20, bold=True, heading_level=1)
+        out, _ = apply_formatting("Meeting Notice and Voting Roadmap", [span])
+        assert "and # Voting" not in out
+        assert out.startswith("Meeting Notice and")
+
+    def test_mid_line_heading_degrades_to_bold(self):
+        """Bold is valid inline and conveys what the heading would have."""
+        span = TextSpan(text="Voting Roadmap", x0=0, y0=0, x1=90, y1=12,
+                        size=20, bold=True, heading_level=1)
+        out, _ = apply_formatting("Meeting Notice and Voting Roadmap", [span])
+        assert "**Voting Roadmap**" in out
+
+    def test_heading_at_line_start_still_becomes_a_heading(self):
+        span = TextSpan(text="Quarterly Report", x0=0, y0=0, x1=90, y1=12,
+                        size=20, bold=True, heading_level=1)
+        out, report = apply_formatting("Quarterly Report\n\nBody text.", [span])
+        assert out.startswith("# Quarterly Report")
+        assert report.headings == 1
+
+    def test_heading_after_leading_whitespace_is_still_a_line_start(self):
+        span = TextSpan(text="Section One", x0=0, y0=0, x1=60, y1=12,
+                        size=18, bold=True, heading_level=2)
+        out, _ = apply_formatting("intro\n   Section One\nbody", [span])
+        assert "## Section One" in out
+
+
+class TestSpanMerging:
+    def test_runs_on_one_baseline_merge_into_one_span(self):
+        """Kerning, colour and font-subset boundaries split a title into runs."""
+        from docfusion.formatting import merge_adjacent_spans
+
+        parts = [
+            TextSpan(text="Meeting Notice and", x0=10, y0=100, x1=90, y1=112,
+                     size=20, bold=True, heading_level=1),
+            TextSpan(text="Voting", x0=93, y0=100, x1=130, y1=112,
+                     size=20, bold=True, heading_level=1),
+            TextSpan(text="Roadmap", x0=133, y0=100, x1=180, y1=112,
+                     size=20, bold=True, heading_level=1),
+        ]
+        merged = merge_adjacent_spans(parts)
+        assert len(merged) == 1
+        assert merged[0].text == "Meeting Notice and Voting Roadmap"
+        assert merged[0].x1 == 180
+
+    def test_different_styles_do_not_merge(self):
+        from docfusion.formatting import merge_adjacent_spans
+
+        parts = [
+            TextSpan(text="Bold bit", x0=10, y0=100, x1=50, y1=112, size=11, bold=True),
+            TextSpan(text="plain bit", x0=52, y0=100, x1=95, y1=112, size=11),
+        ]
+        assert len(merge_adjacent_spans(parts)) == 2
+
+    def test_separate_lines_do_not_merge(self):
+        from docfusion.formatting import merge_adjacent_spans
+
+        parts = [
+            TextSpan(text="line one", x0=10, y0=100, x1=60, y1=112, size=11, bold=True),
+            TextSpan(text="line two", x0=10, y0=80, x1=60, y1=92, size=11, bold=True),
+        ]
+        assert len(merge_adjacent_spans(parts)) == 2
