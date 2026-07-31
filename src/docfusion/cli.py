@@ -148,9 +148,15 @@ def _cmd_batch(args: argparse.Namespace) -> int:
 
     in_dir, out_dir = Path(args.input_dir), Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    pdfs = sorted(in_dir.glob("**/*.pdf"))
+    from docfusion.io import IMAGE_SUFFIXES
+
+    # Scans arrive as images as often as PDFs; batch should not silently skip them.
+    suffixes = {".pdf", *IMAGE_SUFFIXES}
+    pdfs = sorted(
+        p for p in in_dir.glob("**/*") if p.is_file() and p.suffix.lower() in suffixes
+    )
     if not pdfs:
-        print(f"no PDFs found under {in_dir}", file=sys.stderr)
+        print(f"no PDFs or images found under {in_dir}", file=sys.stderr)
         return 0
 
     pipe = DocFusionPipeline(_build_config(args))

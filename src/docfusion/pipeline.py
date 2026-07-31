@@ -21,6 +21,7 @@ from docfusion.engines.docling_engine import tier1_extract
 from docfusion.engines.olmocr_client import OlmOCRClient, PageResult
 from docfusion.formatting import FormattingReport, format_page_markdown
 from docfusion.grounding import PageLayout, document_layout
+from docfusion.io import as_pdf, sanitize_text
 from docfusion.licenses import assert_compliant
 from docfusion.pdfium_lock import pdfium_guard
 from docfusion.triage.heuristics import PageDecision, Route, triage_pdf
@@ -175,7 +176,15 @@ class DocFusionPipeline:
         return reports
 
     def convert(self, path: str | Path) -> DocumentResult:
-        path = Path(path)
+        """Convert a document. Accepts PDFs and single-image scans alike."""
+        original = Path(path)
+        with as_pdf(original) as pdf_path:
+            result = self._convert_pdf(pdf_path)
+        # Report the path the caller gave us, not the temporary conversion.
+        result.path = str(original)
+        return result
+
+    def _convert_pdf(self, path: Path) -> DocumentResult:
         decisions = triage_pdf(path, self.config.thresholds)
         escalated = [d.profile.index for d in decisions if d.route is Route.VLM]
 
@@ -228,7 +237,7 @@ class DocFusionPipeline:
             degraded_pages=degraded,
             fallback_pages=fallbacks,
             page_results=tier2,
-            page_markdown=page_markdown,
+            page_markdown={i: sanitize_text(t) for i, t in page_markdown.items()},
             formatting=formatting,
             layout=layout,
         )

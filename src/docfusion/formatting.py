@@ -212,7 +212,12 @@ def _extract_spans_locked(page: pdfium.PdfPage, detect_headings: bool) -> list[T
         current_key: tuple | None = None
 
         for index in range(count):
-            char = chr(raw.FPDFText_GetUnicode(textpage.raw, index))
+            code_point = raw.FPDFText_GetUnicode(textpage.raw, index)
+            # Malformed embedded encodings yield unpaired UTF-16 surrogates.
+            # They survive in a str and then raise on encode, far from here.
+            if 0xD800 <= code_point <= 0xDFFF:
+                continue
+            char = chr(code_point)
             flags = ctypes.c_int(0)
             length = raw.FPDFText_GetFontInfo(
                 textpage.raw, index, buffer, 160, ctypes.byref(flags)
