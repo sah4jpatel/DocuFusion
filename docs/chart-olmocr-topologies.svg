@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 228" width="860" height="228" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+<text x="0" y="24" font-size="17" font-weight="600" fill="#0f766e">olmOCR-Bench — what triage costs</text>
+<text x="0" y="46" font-size="12.5" fill="#94a3b8">419 tables + multi-column pages, olmOCR-2-7B on one RTX 3090. Scored by olmOCR's own scorer.</text>
+<line x1="250.0" y1="66" x2="250.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="250.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">0</text>
+<line x1="358.0" y1="66" x2="358.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="358.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">20</text>
+<line x1="466.0" y1="66" x2="466.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="466.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">40</text>
+<line x1="574.0" y1="66" x2="574.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="574.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">60</text>
+<line x1="682.0" y1="66" x2="682.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="682.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">80</text>
+<line x1="790.0" y1="66" x2="790.0" y2="198" stroke="#cbd5e133" stroke-width="1"/>
+<text x="790.0" y="214" font-size="10.5" fill="#94a3b8" text-anchor="middle">100</text>
+<text x="240" y="88" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">DocFusion — all-VLM</text>
+<rect x="250" y="77" width="483.8" height="18" rx="2.5" fill="#64748b"/>
+<text x="740.8" y="90" font-size="11.5" fill="#94a3b8" font-weight="400">89.6</text>
+<text x="240" y="118" font-size="12.5" fill="#94a3b8" font-weight="600" text-anchor="end">DocFusion — hybrid (default)</text>
+<rect x="250" y="107" width="455.8" height="18" rx="2.5" fill="#0f766e"/>
+<text x="712.8" y="120" font-size="11.5" fill="#94a3b8" font-weight="600">84.4</text>
+<text x="240" y="148" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">DocFusion — Tier-1 only</text>
+<rect x="250" y="137" width="400.7" height="18" rx="2.5" fill="#64748b"/>
+<text x="657.7" y="150" font-size="11.5" fill="#94a3b8" font-weight="400">74.2</text>
+<text x="240" y="178" font-size="12.5" fill="#94a3b8" font-weight="400" text-anchor="end">Tier-1 only, no Docling</text>
+<rect x="250" y="167" width="288.4" height="18" rx="2.5" fill="#64748b"/>
+<text x="545.4" y="180" font-size="11.5" fill="#94a3b8" font-weight="400">53.4</text>
+</svg>

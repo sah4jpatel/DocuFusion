@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: tests (py${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is in the matrix on purpose: extraction output is full of
+        # em-dashes, Greek letters and LaTeX, and the locale codec there
+        # (cp1252) raises UnicodeEncodeError on all of them. That bug shipped
+        # once already.
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false        # upstream trees are large; tests skip when absent
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Test
+        run: pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check src/ tests/ scripts/ integrations/ --select E,F,W,I,B --line-length 120
+
+  license-audit:
+    name: license audit (must fail closed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      # The whole point of the project: if a restricted weight ever enters the
+      # runtime BOM, this job fails and the change does not merge.
+      - run: docfusion audit
+
+  upstream-pin:
+    name: upstream contract pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]" pyyaml
+      # Fails if olmOCR changes its prompt or Marker stops using OpenAI
+      # structured outputs — i.e. if our vendored assumptions have drifted.
+      - run: pytest -q tests/test_protocol.py::TestUpstreamPin tests/test_docfusion.py::TestVLLMShim
