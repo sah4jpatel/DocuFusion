@@ -1,0 +1,17 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# benchmark artifacts (large; fetched with `hf download allenai/olmOCR-bench`)
+.bench_data/
+.bench_subset/
+.bench_smoke.json
+benchmark_results.json
+.bench_run.log
+.smoke_olmocr.py
+.bench_dl.py
+.setup*.sh
+.s3tmp
+.timing_probe.py

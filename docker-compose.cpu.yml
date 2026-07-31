@@ -1,0 +1,17 @@
+# CPU-only development override: no vLLM/GPU, Tier 1 only.
+# Pages that would escalate to the VLM fall back to text-layer extraction and
+# are reported so you know what a GPU deployment would recover.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up docfusion
+
+services:
+  vllm:
+    deploy:
+      replicas: 0
+
+  docfusion:
+    depends_on: !override []
+    environment:
+      - DOCFUSION_VLM_WAIT=0
+    entrypoint: ["docfusion"]
+    command: ["batch", "/data/in", "/data/out", "--tier1-only"]

@@ -1,0 +1,69 @@
+# DocFusion full stack: local olmOCR on vLLM (GPU) + the docfusion pipeline.
+#
+#   ./setup.sh                    # one-command bootstrap
+#   docker compose up -d          # or manually
+#   docker compose run --rm docfusion triage /data/in/report.pdf
+#
+# CPU-only dev machine (no Tier-2, Docling/text-layer only):
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up
+
+services:
+  vllm:
+    # Pinned, not :latest — see .env.example for why a floating tag has broken
+    # this stack before. Change it deliberately and re-run the benchmark.
+    image: vllm/vllm-openai:${VLLM_VERSION:-v0.11.2}
+    command: >
+      --model ${OLMOCR_MODEL:-allenai/olmOCR-2-7B-1025-FP8}
+      --max-num-seqs ${VLLM_MAX_NUM_SEQS:-256}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-16384}
+      --enable-prefix-caching
+      --gpu-memory-utilization ${VLLM_GPU_MEM_UTIL:-0.90}
+      --dtype auto
+      --port 8000
+    environment:
+      - HF_HOME=/models
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+    volumes:
+      - hf-cache:/models            # model weights persist across restarts
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    ipc: host                       # required by vLLM for shared-memory tensors
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VLLM_GPU_COUNT:-1}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/v1/models"]
+      interval: 15s
+      timeout: 5s
+      retries: 60                   # first start downloads ~8 GB of weights
+      start_period: 120s
+    restart: unless-stopped
+
+  docfusion:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+      args:
+        WITH_DOCLING: "${WITH_DOCLING:-1}"
+    image: docfusion:latest
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      - DOCFUSION_VLM_BASE_URL=http://vllm:8000/v1
+      - DOCFUSION_VLM_MODEL=${OLMOCR_MODEL:-allenai/olmOCR-2-7B-1025-FP8}
+      - DOCFUSION_NO_DOCLING=${DOCFUSION_NO_DOCLING:-0}
+      - DOCFUSION_WATCH_INTERVAL=${DOCFUSION_WATCH_INTERVAL:-30}
+      - DOCFUSION_WORKERS=${DOCFUSION_WORKERS:-8}
+    volumes:
+      - ${INPUT_DIR:-./data/in}:/data/in:ro
+      - ${OUTPUT_DIR:-./data/out}:/data/out
+    command: ["${DOCFUSION_MODE:-watch}"]
+    restart: unless-stopped
+
+volumes:
+  hf-cache:

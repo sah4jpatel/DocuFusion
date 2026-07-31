@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docfusion"
+version = "0.2.0"
+description = "License-compliant enterprise document intelligence: Docling triage + Marker orchestration + olmOCR VLM escalation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Internal Platform Engineering" }]
+keywords = ["ocr", "pdf", "vlm", "docling", "marker", "olmocr", "rag"]
+
+# Core is deliberately lightweight: triage + anchoring + vLLM client run anywhere.
+dependencies = [
+    "pydantic>=2.5",
+    "pypdfium2>=4.28",
+    "pillow>=10.0",
+    "openai>=1.92",          # OpenAI-compatible client used against local vLLM
+    "pyyaml>=6.0",           # olmOCR-2 replies carry YAML front matter
+]
+
+[project.optional-dependencies]
+# Tier-1 deterministic engine (MIT). Pulls torch; models fetched from HF hub.
+docling = ["docling>=2.0"]
+# Tier-2 orchestrator harness (Apache-2.0 code). NOTE: marker-pdf downloads
+# Surya model weights which are OpenRAIL-M-restricted — see docfusion.licenses.
+marker = ["marker-pdf>=1.10"]
+# Local serving of olmOCR weights (Apache-2.0). Pinned deliberately: `latest`
+# has broken this stack (0.26 removed --disable-log-requests and its UvaBuffer
+# path aborts without pinned memory). 0.11.2 is what olmOCR itself pins.
+serve = ["vllm==0.11.2"]
+# Running olmOCR-Bench through upstream's scorer (Playwright renders KaTeX).
+bench = [
+    "fuzzysearch", "rapidfuzz", "sequence_align", "syntok",
+    "playwright", "lxml", "pypdf", "tqdm", "beautifulsoup4",
+]
+dev = ["pytest>=8", "reportlab>=4", "ruff"]
+all = ["docfusion[docling,marker,serve]"]
+
+[project.scripts]
+docfusion = "docfusion.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

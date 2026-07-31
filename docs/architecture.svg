@@ -1,0 +1,267 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1030" width="1500" height="1010" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <title>DocFusion architecture — dual-tier document intelligence with license clearance</title>
+
+  <defs>
+    <style>
+      .ink   { fill: #14243A; }
+      .mute  { fill: #5A6B80; }
+      .h1    { font-family: Inter, 'Helvetica Neue', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.5px; }
+      .h2    { font-family: Inter, 'Helvetica Neue', system-ui, sans-serif; font-weight: 700; }
+      .eyebrow { font-size: 11px; letter-spacing: 2.4px; fill: #7A8AA0; }
+      .lbl   { font-size: 12.5px; }
+      .sm    { font-size: 11.5px; }
+      .card  { fill: #FFFFFF; stroke: #C6D2E0; stroke-width: 1; }
+      .band  { fill: #E7EDF4; }
+      .flow  { fill: none; stroke: #14243A; stroke-width: 2; }
+      .flow-hot { fill: none; stroke: #B45309; stroke-width: 2.5; }
+      .dash  { fill: none; stroke: #8C9BB0; stroke-width: 1.4; stroke-dasharray: 5 4; }
+    </style>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3.2" orient="auto">
+      <path d="M0,0 L7.5,3.2 L0,6.4 z" fill="#14243A"/>
+    </marker>
+    <marker id="ar-hot" markerWidth="9" markerHeight="9" refX="7.5" refY="3.2" orient="auto">
+      <path d="M0,0 L7.5,3.2 L0,6.4 z" fill="#B45309"/>
+    </marker>
+    <marker id="ar-mute" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#8C9BB0"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1010" fill="#F2F5F9"/>
+
+  <!-- ══ header ══ -->
+  <text x="48" y="56" class="h1 ink" font-size="34">DocFusion</text>
+  <text x="48" y="80" class="mute" font-size="14">Marker's orchestration · Docling's speed · olmOCR's accuracy — with every model weight cleared for enterprise use.</text>
+
+  <g transform="translate(1196,26)">
+    <rect width="256" height="60" rx="4" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+    <rect width="6" height="60" rx="0" fill="#0F766E"/>
+    <text x="20" y="26" class="sm" fill="#0F766E" letter-spacing="1.6">docfusion audit</text>
+    <text x="20" y="46" class="h2" font-size="15" fill="#0F766E">AUDIT PASSED · 8/8 permissive</text>
+  </g>
+
+  <!-- ══ legend: the clearance rail ══ -->
+  <g transform="translate(48,102)">
+    <text class="eyebrow" y="0">LEFT RAIL ON EACH BOX = WEIGHT LICENSE</text>
+    <rect x="330" y="-11" width="6" height="14" fill="#0F766E"/>
+    <text x="344" y="0" class="sm ink">Apache-2.0 / MIT — cleared</text>
+    <rect x="560" y="-11" width="6" height="14" fill="#9F1239"/>
+    <text x="574" y="0" class="sm ink">OpenRAIL-M — denylisted, never loaded</text>
+    <rect x="880" y="-11" width="6" height="14" fill="#8C9BB0"/>
+    <text x="894" y="0" class="sm ink">no model — deterministic code</text>
+  </g>
+
+  <!-- ══════════ RUNTIME FLOW ══════════ -->
+  <rect x="32" y="126" width="1436" height="404" rx="8" class="band"/>
+  <text x="52" y="152" class="eyebrow">RUNTIME PATH — ONE DOCUMENT</text>
+
+  <!-- input -->
+  <g transform="translate(52,236)">
+    <rect width="112" height="86" rx="5" class="card"/>
+    <rect width="6" height="86" fill="#8C9BB0"/>
+    <text x="22" y="34" class="h2 ink" font-size="14">PDF</text>
+    <text x="22" y="54" class="sm mute">born-digital</text>
+    <text x="22" y="70" class="sm mute">or scanned</text>
+  </g>
+  <path d="M170,279 L204,279" class="flow" marker-end="url(#ar)"/>
+
+  <!-- triage -->
+  <g transform="translate(210,186)">
+    <rect width="228" height="188" rx="5" class="card"/>
+    <rect width="6" height="188" fill="#8C9BB0"/>
+    <text x="20" y="28" class="h2 ink" font-size="14">Triage router</text>
+    <text x="20" y="46" class="sm mute">pypdfium2 · CPU · no models</text>
+    <line x1="20" y1="58" x2="208" y2="58" stroke="#DCE4EE"/>
+    <text x="20" y="78" class="sm ink">text-layer density</text>
+    <text x="20" y="98" class="sm ink">math-symbol density</text>
+    <text x="20" y="118" class="sm ink">image area coverage</text>
+    <text x="20" y="138" class="sm ink">vector-path count</text>
+    <text x="20" y="158" class="sm ink">garbled-word check</text>
+    <text x="20" y="178" class="sm" fill="#0F766E">~30+ pages/sec</text>
+  </g>
+
+  <!-- split arrows with true proportions -->
+  <path d="M444,240 L470,240 L470,208 L520,208" class="flow" marker-end="url(#ar)"/>
+  <text x="478" y="200" class="sm h2" fill="#14243A">clean pages (measured 46%*)</text>
+
+  <path d="M444,320 L470,320 L470,392 L520,392" class="flow-hot" marker-end="url(#ar-hot)"/>
+  <text x="478" y="384" class="sm h2" fill="#B45309">math · scans · dense tables (54%*)</text>
+
+  <!-- TIER 1 -->
+  <g transform="translate(526,172)">
+    <rect width="332" height="104" rx="5" class="card"/>
+    <rect width="6" height="104" fill="#0F766E"/>
+    <text x="20" y="27" class="h2 ink" font-size="14">Tier 1 · deterministic</text>
+    <text x="20" y="48" class="lbl ink">Docling — DocLayNet + TableFormer</text>
+    <text x="20" y="68" class="sm mute">MIT · ~1.6 GB VRAM · 2+ pages/sec</text>
+    <text x="20" y="88" class="sm mute">fallback: raw text layer (no models)</text>
+  </g>
+
+  <!-- TIER 2 -->
+  <g transform="translate(526,300)">
+    <rect width="332" height="196" rx="5" class="card"/>
+    <rect width="6" height="196" fill="#0F766E"/>
+    <text x="20" y="27" class="h2" font-size="14" fill="#B45309">Tier 2 · VLM escalation</text>
+
+    <rect x="20" y="40" width="292" height="42" rx="3" fill="#F7F1E6" stroke="#E0CDA8"/>
+    <text x="32" y="58" class="lbl ink">olmOCR-2 v4 prompt (no anchoring)</text>
+    <text x="32" y="74" class="sm mute">text-first · 1288px longest side · 8k tokens</text>
+
+    <rect x="20" y="90" width="292" height="48" rx="3" fill="#EAF3F2" stroke="#A9CFCA"/>
+    <text x="32" y="108" class="lbl ink">olmOCR-2-7B on vLLM</text>
+    <text x="32" y="124" class="sm mute">Apache-2.0 weights · YAML front matter stripped</text>
+
+    <rect x="20" y="146" width="292" height="38" rx="3" fill="#F7F1E6" stroke="#E0CDA8"/>
+    <text x="32" y="169" class="sm ink">Temp ladder · rotation fix · loop guards</text>
+  </g>
+
+  <!-- merge -->
+  <path d="M864,224 L916,224 L916,290" class="flow" marker-end="url(#ar)"/>
+  <path d="M864,398 L916,398 L916,332" class="flow-hot" marker-end="url(#ar-hot)"/>
+
+  <g transform="translate(890,286)">
+    <rect width="52" height="52" rx="26" fill="#14243A"/>
+    <path d="M14,17 L26,26 M14,35 L26,26 M26,26 L40,26" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+  <text x="916" y="360" text-anchor="middle" class="sm mute">merge in page order</text>
+
+  <path d="M948,312 L992,312" class="flow" marker-end="url(#ar)"/>
+
+  <g transform="translate(998,258)">
+    <rect width="150" height="108" rx="5" class="card"/>
+    <rect width="6" height="108" fill="#8C9BB0"/>
+    <text x="20" y="30" class="h2 ink" font-size="14">Markdown</text>
+    <text x="20" y="52" class="sm mute">LaTeX equations</text>
+    <text x="20" y="70" class="sm mute">structured tables</text>
+    <text x="20" y="88" class="sm mute">+ routing report</text>
+  </g>
+
+  <!-- denylist card -->
+  <g transform="translate(1186,206)">
+    <rect width="266" height="226" rx="5" fill="#FCF3F5" stroke="#9F1239" stroke-width="1.5"/>
+    <rect width="6" height="226" fill="#9F1239"/>
+    <text x="20" y="30" class="h2" font-size="14" fill="#9F1239">Denylisted — never loaded</text>
+    <line x1="20" y1="42" x2="246" y2="42" stroke="#E5C2CC"/>
+
+    <text x="20" y="68" class="lbl ink" text-decoration="line-through">Chandra 2 weights</text>
+    <text x="20" y="86" class="sm mute">OpenRAIL-M · revenue-capped</text>
+    <text x="20" y="112" class="lbl ink" text-decoration="line-through">Surya weights</text>
+    <text x="20" y="130" class="sm mute">Marker's default layout models</text>
+
+    <line x1="20" y1="150" x2="246" y2="150" stroke="#E5C2CC"/>
+    <text x="20" y="172" class="sm ink">Marker's Apache-2.0 code</text>
+    <text x="20" y="190" class="sm ink">is kept — only the weights</text>
+    <text x="20" y="208" class="sm ink">are swapped for olmOCR.</text>
+  </g>
+  <path d="M1180,312 L1156,312" class="dash" marker-end="url(#ar-mute)"/>
+
+  <!-- ══════════ ORCHESTRATION MODES ══════════ -->
+  <rect x="32" y="552" width="708" height="216" rx="8" class="band"/>
+  <text x="52" y="578" class="eyebrow">THREE WAYS TO DRIVE TIER 2 — SAME olmOCR ENDPOINT</text>
+
+  <g transform="translate(52,592)">
+    <rect width="216" height="156" rx="5" class="card"/>
+    <rect width="6" height="156" fill="#8C9BB0"/>
+    <text x="18" y="28" class="h2 ink" font-size="13">DocFusion direct</text>
+    <text x="18" y="48" class="sm mute">default · fewest moving parts</text>
+    <text x="18" y="74" class="sm ink">pipeline.py calls the</text>
+    <text x="18" y="92" class="sm ink">vLLM endpoint per page</text>
+    <text x="18" y="128" class="sm" fill="#0F766E">no Marker install needed</text>
+  </g>
+
+  <g transform="translate(288,592)">
+    <rect width="216" height="156" rx="5" class="card"/>
+    <rect width="6" height="156" fill="#8C9BB0"/>
+    <text x="18" y="28" class="h2 ink" font-size="13">Marker orchestrates</text>
+    <text x="18" y="48" class="sm mute">best chunking + page merging</text>
+    <text x="18" y="74" class="sm ink">--use_llm with the</text>
+    <text x="18" y="92" class="sm ink">DocFusion VLLMService</text>
+    <text x="18" y="128" class="sm" fill="#B45309">needs the shim ↓</text>
+  </g>
+
+  <g transform="translate(524,592)">
+    <rect width="200" height="156" rx="5" class="card"/>
+    <rect width="6" height="156" fill="#8C9BB0"/>
+    <text x="18" y="28" class="h2 ink" font-size="13">Docling orchestrates</text>
+    <text x="18" y="48" class="sm mute">richest document object model</text>
+    <text x="18" y="74" class="sm ink">ApiVlmOptions points</text>
+    <text x="18" y="92" class="sm ink">at the same endpoint</text>
+    <text x="18" y="128" class="sm" fill="#0F766E">no shim needed</text>
+  </g>
+
+  <!-- ══════════ THE SHIM ══════════ -->
+  <rect x="760" y="552" width="708" height="216" rx="8" fill="#FBF6EC"/>
+  <text x="780" y="578" class="eyebrow">THE ONE INTEGRATION THAT BREAKS — AND THE FIX</text>
+
+  <g transform="translate(780,592)">
+    <rect width="318" height="156" rx="5" fill="#FFFFFF" stroke="#9F1239" stroke-width="1.5"/>
+    <text x="18" y="28" class="h2" font-size="13" fill="#9F1239">Marker's stock OpenAIService</text>
+    <text x="18" y="54" class="sm ink">completions.parse(</text>
+    <text x="18" y="72" class="sm ink">  response_format=&lt;schema&gt;)</text>
+    <text x="18" y="102" class="sm mute">OpenAI Structured Outputs —</text>
+    <text x="18" y="120" class="sm mute">self-hosted vLLM rejects it</text>
+    <text x="18" y="142" class="h2 sm" fill="#9F1239">HTTP 400 · pipeline crashes</text>
+  </g>
+
+  <path d="M1108,670 L1146,670" class="flow" marker-end="url(#ar)"/>
+
+  <g transform="translate(1152,592)">
+    <rect width="300" height="156" rx="5" fill="#FFFFFF" stroke="#0F766E" stroke-width="1.5"/>
+    <text x="18" y="28" class="h2" font-size="13" fill="#0F766E">DocFusion VLLMService</text>
+    <text x="18" y="54" class="sm ink">1 · schema into the prompt</text>
+    <text x="18" y="74" class="sm ink">2 · response_format=json_object</text>
+    <text x="18" y="94" class="sm ink">3 · vLLM guided_json enforces</text>
+    <text x="18" y="114" class="sm ink">4 · tolerant parse + validate</text>
+    <text x="18" y="142" class="h2 sm" fill="#0F766E">Marker gets the shape it expects</text>
+  </g>
+
+  <!-- ══════════ DEPLOYMENT ══════════ -->
+  <rect x="32" y="790" width="1436" height="188" rx="8" class="band"/>
+  <text x="52" y="816" class="eyebrow">DEPLOYMENT — ./setup.sh</text>
+
+  <g transform="translate(52,830)">
+    <rect width="300" height="130" rx="5" class="card"/>
+    <rect width="6" height="130" fill="#8C9BB0"/>
+    <text x="20" y="28" class="h2 ink" font-size="13">docfusion container</text>
+    <text x="20" y="50" class="sm mute">CPU only · non-root · slim</text>
+    <text x="20" y="72" class="sm ink">watch /data/in → /data/out</text>
+    <text x="20" y="92" class="sm ink">Docling models baked in</text>
+    <text x="20" y="112" class="sm ink">audit runs before every batch</text>
+  </g>
+
+  <path d="M358,895 L432,895" class="flow" marker-end="url(#ar)"/>
+  <text x="395" y="884" text-anchor="middle" class="sm mute">HTTP</text>
+
+  <g transform="translate(438,830)">
+    <rect width="300" height="130" rx="5" class="card"/>
+    <rect width="6" height="130" fill="#0F766E"/>
+    <text x="20" y="28" class="h2 ink" font-size="13">vllm container · GPU</text>
+    <text x="20" y="50" class="sm mute">serves olmOCR-2-7B-FP8</text>
+    <text x="20" y="72" class="sm ink">max-num-seqs 256</text>
+    <text x="20" y="92" class="sm ink">max-model-len 16384 (KV cap)</text>
+    <text x="20" y="112" class="sm ink">prefix caching · weights volume</text>
+  </g>
+
+  <g transform="translate(770,830)">
+    <rect width="330" height="130" rx="5" class="card"/>
+    <rect width="6" height="130" fill="#8C9BB0"/>
+    <text x="20" y="28" class="h2 ink" font-size="13">CPU-only override</text>
+    <text x="20" y="50" class="sm mute">laptops · CI · no GPU present</text>
+    <text x="20" y="72" class="sm ink">--tier1-only: VLM never called</text>
+    <text x="20" y="92" class="sm ink">escalation candidates still</text>
+    <text x="20" y="112" class="sm ink">reported, so you see the gap</text>
+  </g>
+
+  <g transform="translate(1118,830)">
+    <rect width="334" height="130" rx="5" class="card"/>
+    <rect width="6" height="130" fill="#0F766E"/>
+    <text x="20" y="28" class="h2 ink" font-size="13">Tracks upstream</text>
+    <text x="20" y="50" class="sm mute">git submodules under third_party/</text>
+    <text x="20" y="72" class="sm ink">marker · docling · olmocr</text>
+    <text x="20" y="92" class="sm ink">pinned; bump with one command</text>
+    <text x="20" y="112" class="sm ink">runtime versions via pip extras</text>
+  </g>
+
+  <text x="60" y="990" class="sm mute">* Escalation rates measured over all 1403 olmOCR-Bench pages, a deliberately adversarial corpus (100% of old scans escalate, 30% of multi-column).</text>
+  <text x="60" y="1008" class="sm mute">Ordinary business paperwork escalates far less. Run `docfusion triage` on your own corpus — the rate is what sets your GPU bill.</text>
+</svg>

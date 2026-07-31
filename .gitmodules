@@ -1,0 +1,9 @@
+[submodule "third_party/marker"]
+	path = third_party/marker
+	url = https://github.com/datalab-to/marker
+[submodule "third_party/docling"]
+	path = third_party/docling
+	url = https://github.com/docling-project/docling
+[submodule "third_party/olmocr"]
+	path = third_party/olmocr
+	url = https://github.com/allenai/olmocr
