@@ -27,6 +27,17 @@ BF16_WEIGHTS_GB = 16.0
 FP8_WEIGHTS_GB = 8.5
 KV_CACHE_HEADROOM_GB = 4.0
 
+# Measured on olmOCR-2-7B (Qwen2.5-VL-7B, GQA) served bf16 on an RTX 3090:
+# 5.25 GB of KV cache held 62,608 tokens, i.e. ~88 KB per token. vLLM reported
+# the matching "Maximum concurrency for 16,384 tokens per request: 3.82x".
+KV_BYTES_PER_TOKEN = 88_000
+# A rendered page is ~1.6k image tokens; a dense enterprise page emits a few
+# thousand more. This is what a request actually occupies, as opposed to the
+# 16384 ceiling it is merely allowed to reach.
+TYPICAL_PAGE_TOKENS = 4096
+MIN_NUM_SEQS = 4
+MAX_NUM_SEQS = 256
+
 
 @dataclass
 class GPU:
@@ -52,6 +63,8 @@ class ServingPlan:
     max_model_len: int = 16384
     gpu_memory_utilization: float = 0.90
     tensor_parallel_size: int = 1
+    max_num_seqs: int = MAX_NUM_SEQS
+    kv_cache_gb: float = 0.0
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -66,10 +79,36 @@ class ServingPlan:
             "--gpu-memory-utilization", f"{self.gpu_memory_utilization:.2f}",
             "--tensor-parallel-size", str(self.tensor_parallel_size),
             # Continuous batching: keep the GPU saturated with page requests.
-            "--max-num-seqs", "256",
+            # Sized from the KV cache rather than fixed — see max_num_seqs.
+            "--max-num-seqs", str(self.max_num_seqs),
             "--enable-prefix-caching",
         ]
         return args
+
+
+def concurrency_for(
+    kv_cache_gb: float, typical_page_tokens: int = TYPICAL_PAGE_TOKENS
+) -> int:
+    """How many page requests to allow in flight at once.
+
+    A fixed ``--max-num-seqs 256`` is meaningless on a small card, and a fixed
+    small number starves a large one — the first benchmark run here used 8
+    while the KV cache sat at 30% utilisation, so throughput was bounded by the
+    client rather than the GPU.
+
+    Sized against a *typical* page, not ``max_model_len``. vLLM's own
+    "maximum concurrency" line assumes every request occupies the full context,
+    which no real page does: a rendered page is ~1.6k image tokens and a dense
+    enterprise page emits a few thousand more. Sizing on the worst case gave 4
+    on a 3090, while 24 ran that card comfortably. ``--max-num-seqs`` is an
+    upper bound, not a reservation — vLLM preempts if a batch genuinely runs
+    the cache out — so erring high costs nothing and erring low costs
+    throughput.
+    """
+    if kv_cache_gb <= 0 or typical_page_tokens <= 0:
+        return MIN_NUM_SEQS
+    tokens = (kv_cache_gb * 1024 ** 3) / KV_BYTES_PER_TOKEN
+    return max(MIN_NUM_SEQS, min(MAX_NUM_SEQS, int(tokens // typical_page_tokens)))
 
 
 def detect_gpus() -> list[GPU]:
@@ -155,12 +194,16 @@ def plan_serving(gpus: list[GPU] | None = None, requested_model: str | None = No
 
     # A high-resolution page render is ~1-2k image tokens; the ceiling matters
     # more than throughput here because KV overflow crashes the pod outright.
+    plan.kv_cache_gb = round(kv_gb, 2)
+
     if kv_gb < 3.0:
         plan.max_model_len = 8192
         plan.warnings.append(
             f"Only ~{kv_gb:.1f} GB left for KV cache after weights; capping max-model-len at "
             f"8192 to avoid OOM. Pages needing more context will be flagged, not silently truncated."
         )
+
+    plan.max_num_seqs = concurrency_for(kv_gb)
 
     if len(gpus) > 1 and all(g.name == primary.name for g in gpus):
         plan.warnings.append(

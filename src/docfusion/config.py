@@ -49,7 +49,13 @@ class VLMEndpoint(BaseModel):
     model: str = OLMOCR_MODEL_FP8
     api_key: str = "docfusion-local"      # vLLM ignores it but the client requires one
     max_output_tokens: int = MAX_OUTPUT_TOKENS
-    timeout_s: int = 180
+    # Generous on purpose. This is a *queueing* deadline, not a liveness check:
+    # with N requests in flight the server answers each one roughly N times
+    # slower, so a timeout tuned for a single request converts ordinary queue
+    # delay into a timeout, which triggers the retry ladder, which adds load —
+    # a collapse that looks like the model hanging. Measured: a dense
+    # enterprise page at 16-way concurrency on one 3090 takes over 180s.
+    timeout_s: int = 600
 
     # Rendering: olmOCR-2 is trained on longest-side-normalised images, not a DPI.
     target_longest_image_dim: int = TARGET_LONGEST_IMAGE_DIM

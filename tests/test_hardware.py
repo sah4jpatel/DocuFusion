@@ -9,7 +9,7 @@ the most common enterprise cards.
 from __future__ import annotations
 
 from docfusion.config import OLMOCR_MODEL_BF16, OLMOCR_MODEL_FP8
-from docfusion.hardware import GPU, plan_serving, recommend_model
+from docfusion.hardware import GPU, concurrency_for, plan_serving, recommend_model
 
 L40S = GPU(index=0, name="NVIDIA L40S", memory_total_mb=46068, compute_capability=8.9)
 A100 = GPU(index=0, name="NVIDIA A100-SXM4-80GB", memory_total_mb=81920, compute_capability=8.0)
@@ -86,10 +86,44 @@ class TestServeArgs:
     def test_args_carry_throughput_settings(self):
         args = plan_serving([L40S]).as_vllm_args()
         assert "--enable-prefix-caching" in args
-        assert args[args.index("--max-num-seqs") + 1] == "256"
         assert args[args.index("--max-model-len") + 1] == "16384"
+        assert int(args[args.index("--max-num-seqs") + 1]) > 8
 
     def test_capped_context_reaches_the_args(self):
         a4500 = GPU(index=0, name="NVIDIA RTX A4500", memory_total_mb=20480, compute_capability=8.6)
         args = plan_serving([a4500]).as_vllm_args()
         assert args[args.index("--max-model-len") + 1] == "8192"
+
+
+class TestConcurrencySizing:
+    """--max-num-seqs is bounded by KV cache, not by a nice round number.
+
+    Fixed at 256 it is meaningless on a small card; fixed at 8 it starved a
+    real benchmark run whose KV cache sat at 30% utilisation.
+    """
+
+    def test_sized_for_a_typical_page_not_the_context_ceiling(self):
+        """Measured: a 3090 ran 24 concurrent streams comfortably.
+
+        vLLM's own "maximum concurrency: 3.82x" assumes every request fills the
+        16384 context, which no real page does. Sizing on that worst case
+        returned 4 and would have throttled a card that was fine at 24.
+        """
+        assert concurrency_for(5.25) >= 12
+        # Sizing on the full context is what produced the too-low answer.
+        assert concurrency_for(5.25, typical_page_tokens=16384) < 8
+
+    def test_denser_pages_allow_fewer_streams(self):
+        assert concurrency_for(5.25, 8192) < concurrency_for(5.25, 2048)
+
+    def test_large_cache_is_capped_not_unbounded(self):
+        assert concurrency_for(400.0) == 256
+
+    def test_never_returns_zero(self):
+        assert concurrency_for(0.01) == 4
+        assert concurrency_for(0.0) == 4
+
+    def test_plan_reports_kv_cache_size(self):
+        plan = plan_serving([RTX3090])
+        assert plan.kv_cache_gb > 0
+        assert plan.max_num_seqs >= 4
