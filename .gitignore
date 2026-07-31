@@ -1,8 +1,19 @@
 __pycache__/
+*.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 build/
 dist/
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+*.log
+
+# local ParseBench run output (large; not part of the repo)
+output/
 
 # benchmark artifacts (large; fetched with `hf download allenai/olmOCR-bench`)
 .bench_data/

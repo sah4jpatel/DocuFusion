@@ -5,12 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "docfusion"
 version = "0.2.0"
-description = "License-compliant enterprise document intelligence: Docling triage + Marker orchestration + olmOCR VLM escalation"
+description = "License-compliant enterprise document intelligence: heuristic triage, Docling, olmOCR-2, and per-domain specialist fusion (tables, charts, formulas), built entirely on Apache-2.0/MIT models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Internal Platform Engineering" }]
-keywords = ["ocr", "pdf", "vlm", "docling", "marker", "olmocr", "rag"]
+authors = [{ name = "sah4jpatel" }]
+keywords = ["ocr", "pdf", "vlm", "docling", "olmocr", "rag", "document-ai", "table-extraction", "chart-extraction", "model-fusion"]
+urls = { Repository = "https://github.com/sah4jpatel/DocuFusion", Issues = "https://github.com/sah4jpatel/DocuFusion/issues" }
 
 # Core is deliberately lightweight: triage + anchoring + vLLM client run anywhere.
 dependencies = [
@@ -36,8 +37,15 @@ bench = [
     "fuzzysearch", "rapidfuzz", "sequence_align", "syntok",
     "playwright", "lxml", "pypdf", "tqdm", "beautifulsoup4",
 ]
+# Per-domain fusion specialists (see docfusion.specialists). Each is optional
+# and lazily loaded — installing none of this still works, regions just keep
+# the generalist's text. All Apache-2.0/MIT; see LICENSING.md.
+#   charts:   DePlot (Pix2Struct, Apache-2.0, Google Research)
+#   formulas: pix2tex (MIT, independent). UniMERNet is opt-in and non-US-origin
+#             (Apache-2.0, OpenDataLab) — install it explicitly, not via this extra.
+specialists = ["transformers>=4.40", "torch>=2.1", "pix2tex>=0.1.2"]
 dev = ["pytest>=8", "reportlab>=4", "ruff"]
-all = ["docfusion[docling,marker,serve]"]
+all = ["docfusion[docling,marker,serve,specialists]"]
 
 [project.scripts]
 docfusion = "docfusion.cli:main"
