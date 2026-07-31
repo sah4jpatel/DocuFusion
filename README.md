@@ -25,7 +25,7 @@ On olmOCR-Bench the two models are much closer than headline marketing suggests 
 
 ## Measured, not asserted
 
-Everything below was produced in this repo against a live `allenai/olmOCR-2-7B-1025` on vLLM and the real 1403-PDF olmOCR-Bench. Reproduce with `docfusion bench` and `scripts/`.
+Everything below was produced in this repo against a live `allenai/olmOCR-2-7B-1025` on vLLM (RTX 3090, bf16) and the real 1403-PDF olmOCR-Bench. Scores come from olmOCR's own scorer in `third_party/olmocr`, so they are comparable to the published table. Reproduce with `make stress`, `make compare`, `docfusion bench`.
 
 ### Triage routing (all 1403 bench pages, `scripts/stress_triage.py`)
 
@@ -44,7 +44,38 @@ Everything below was produced in this repo against a live `allenai/olmOCR-2-7B-1
 
 The routing has the right shape: every old scan escalates, most math escalates, and clean multi-column prose mostly does not.
 
-<!-- BENCHMARK_RESULTS -->
+### Does the pipeline query olmOCR-2 correctly?
+
+Routing every page to the VLM should reproduce Ai2's published olmOCR-2 scores. It does:
+
+| category | DocFusion (all-VLM) | Ai2 published |
+|---|---:|---:|
+| multi_column | **83.8** | 83.7 |
+| tables | **84.8** | 84.9 |
+
+419 pages, 0 failures. Matching to within 0.1 is the evidence that the contract in `olmocr_protocol.py` is right — a client using an invented prompt, or leaving the YAML front matter in the output, cannot land there.
+
+### What does triage actually cost?
+
+Same 419 pages (`tables` + `multi_column`), same model, three topologies. RTX 3090, bf16, 8 concurrent documents, Docling on CPU.
+
+| topology | overall | multi_column | tables | escalated | wall | pages/s |
+|---|---:|---:|---:|---:|---:|---:|
+| all-VLM | **89.6** ±1.1 | 83.8 | 84.8 | 100% | 2339 s | 0.18 |
+| **hybrid (default)** | **84.4** ±1.3 | 74.9 | 78.2 | 35% | **1156 s** | **0.36** |
+| Tier-1 only | 74.2 ±1.6 | 64.6 | 61.3 | 0% | 1328 s | 0.32 |
+| Tier-1 only, no Docling | 53.4 ±1.3 | 65.6 | 0.1 | 0% | 38 s | 11.0 |
+
+Four things worth taking from this:
+
+1. **Triage costs 5.2 points for a 2× speedup.** That is the trade in one number. Whether it is worth it is a corpus and budget question, not an architectural one — which is exactly why this is measured rather than asserted.
+2. **Hybrid strictly dominates Tier-1-only** — more accurate *and* faster. The "cheap" deterministic tier is not cheaper here: Docling on CPU runs ~3.2 s/page, slower per page than offloading to a GPU that would otherwise sit idle. The oft-quoted "Docling does 2.1 pages/s" assumes Docling gets a GPU, and on a single-GPU box it cannot have one — vLLM has already claimed the VRAM.
+3. **Docling earns its place in Tier 1**: 74.2 vs 53.4 against the raw text layer, and on tables **61.3 vs 0.1**. A text layer emits no table structure whatsoever, so every table test fails.
+4. **Triage is under-escalating on tables** (78.2 hybrid vs 84.8 all-VLM). For table-heavy corpora, lower `max_path_objects` to buy accuracy with GPU time.
+
+Reproduce: `make compare` (or `scripts/compare_topologies.py`).
+
+
 
 ## Repository layout
 
@@ -62,7 +93,7 @@ src/docfusion/
   pipeline.py, cli.py, config.py, anchoring.py
 third_party/                   # upstream projects as git submodules (marker, docling, olmocr)
 scripts/                       # stress_triage.py, compare_topologies.py
-tests/                         # 94 tests incl. a mock vLLM reproducing real 400s and real reply format
+tests/                         # 95 tests incl. a mock vLLM reproducing real 400s and real reply format
 ```
 
 Upstream projects are tracked as **git submodules** so this library evolves with them:
@@ -202,7 +233,7 @@ pip install "docfusion[dev]"
 pytest
 ```
 
-94 tests. The suite generates fixture PDFs and runs a **mock vLLM server** that reproduces real vLLM behaviour — both its rejection of the OpenAI structured-outputs shape *and* olmOCR-2's real YAML-front-matter reply format. That second part matters: an earlier mock returned clean Markdown, so 31 tests passed against a client that would have leaked front matter into every page in production. Fixtures should imitate the dependency, not your expectations of it.
+95 tests. The suite generates fixture PDFs and runs a **mock vLLM server** that reproduces real vLLM behaviour — both its rejection of the OpenAI structured-outputs shape *and* olmOCR-2's real YAML-front-matter reply format. That second part matters: an earlier mock returned clean Markdown, so 31 tests passed against a client that would have leaked front matter into every page in production. Fixtures should imitate the dependency, not your expectations of it.
 
 Also covered: the retry ladder, rotation correction, salvage-on-exhaustion and text-layer fallback; PDFium thread-safety under 8-way concurrency; and `test_prompt_matches_upstream`, which fails if the submodule's prompt drifts.
 
