@@ -9,20 +9,23 @@ This file is installed into a ParseBench checkout by ``install.py``; it lives
 here rather than in a ParseBench fork so the adapter is versioned with the
 pipeline it adapts.
 
-Two dimensions deserve honesty up front:
+Two of those dimensions are ones olmOCR-2 alone scores zero on, because the
+model returns plain linearised Markdown by construction:
 
-* **Visual grounding** asks a parser to trace every extracted element back to a
-  bounding box on the page. olmOCR-2 emits linearised Markdown and no
-  coordinates, so this provider cannot answer those tests. It reports layout
-  only when Tier 1 (Docling) produced it. Expect a floor score, as every other
-  Markdown-only entry on the leaderboard gets.
-* **Charts** asks for exact data points with series and axis labels. olmOCR-2 is
-  trained to emit a figure *placeholder*
-  (``![alt](page_startx_starty_width_height.png)``), not chart series. This is
-  an architectural limit of the model, not a tuning problem.
+* **Semantic formatting** — no ``**bold**``, no headings, no strikethrough.
+* **Visual grounding** — no coordinates to trace an element back to.
 
-Both are reported rather than worked around: a benchmark you have quietly
-routed around is not a measurement.
+Neither is answered by prompting the model harder. Both are answered by reading
+the PDF: :mod:`docfusion.formatting` recovers typography from font metadata and
+underline rules, and :mod:`docfusion.grounding` reconstructs block boxes and
+reading order from per-glyph coordinates. That is the hybrid earning its keep —
+the model supplies reading order and content fidelity, the file supplies
+typography and geometry.
+
+The honest remaining gap is **charts**, which asks for exact data points with
+series and axis labels. olmOCR-2 emits a figure placeholder, not chart series,
+and no amount of PDF metadata recovers a value that was only ever drawn as a
+bar. That one is reported as measured rather than worked around.
 """
 
 from __future__ import annotations
@@ -38,7 +41,7 @@ from parse_bench.inference.providers.base import (
     ProviderPermanentError,
 )
 from parse_bench.inference.providers.registry import register_provider
-from parse_bench.schemas.parse_output import PageIR, ParseOutput
+from parse_bench.schemas.parse_output import PageIR, ParseLayoutPageIR, ParseOutput
 from parse_bench.schemas.pipeline import PipelineSpec
 from parse_bench.schemas.pipeline_io import (
     InferenceRequest,
@@ -74,6 +77,10 @@ def _build_pipeline(config: dict[str, Any]):
     cfg.vlm.base_url = base_url
     cfg.vlm.model = model
     cfg.max_tier2_workers = int(config.get("workers") or 1)
+    # Typography and coordinates both come from the PDF, not the model, and both
+    # are whole ParseBench dimensions that olmOCR-2 alone scores zero on.
+    cfg.recover_formatting = bool(config.get("recover_formatting", True))
+    cfg.emit_layout = bool(config.get("emit_layout", True))
 
     if mode == "vlm_only":
         cfg.force_tier2_all = True
@@ -131,8 +138,11 @@ class DocFusionProvider(Provider):
             "text": result.markdown,
             "num_pages": len(result.decisions),
             # Kept for analysis: which pages cost GPU, and which degraded.
+            "layout": [page.as_dict() for page in result.layout],
             "docfusion": {
                 "tier2_pages": result.tier2_pages,
+                "formatting_marks": result.formatting_marks_applied,
+                "layout_blocks": sum(len(p.blocks) for p in result.layout),
                 "degraded_pages": result.degraded_pages,
                 "fallback_pages": result.fallback_pages,
                 "escalation_rate": result.tier2_fraction,
@@ -163,11 +173,19 @@ class DocFusionProvider(Provider):
             page_texts.append(text)
 
         full_text = raw_result.raw_output.get("text") or "\n\n".join(page_texts)
+        layout_pages: list[ParseLayoutPageIR] = []
+        for page in raw_result.raw_output.get("layout", []):
+            try:
+                layout_pages.append(ParseLayoutPageIR.model_validate(page))
+            except Exception:  # noqa: BLE001 — layout is additive; never fail a page over it
+                continue
+
         output = ParseOutput(
             task_type="parse",
             example_id=raw_result.request.example_id,
             pipeline_name=raw_result.pipeline_name,
             pages=pages,
+            layout_pages=layout_pages,
             markdown=full_text,
         )
         return InferenceResult(

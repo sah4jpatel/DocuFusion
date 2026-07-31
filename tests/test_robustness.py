@@ -14,6 +14,7 @@ The contract is deliberately split:
 from __future__ import annotations
 
 import pytest
+from pypdfium2 import PdfiumError
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -45,29 +46,29 @@ class TestMalformedDocuments:
     def test_not_a_pdf_raises_for_the_caller_to_record(self, tmp_path):
         bad = tmp_path / "bad.pdf"
         bad.write_bytes(b"this is not a pdf at all")
-        with pytest.raises(Exception):
+        with pytest.raises(PdfiumError):
             triage_pdf(bad)
 
     def test_truncated_pdf_raises(self, tmp_path, simple_pdf):
         truncated = tmp_path / "truncated.pdf"
         truncated.write_bytes(simple_pdf.read_bytes()[:400])
-        with pytest.raises(Exception):
+        with pytest.raises(PdfiumError):
             triage_pdf(truncated)
 
     def test_empty_file_raises(self, tmp_path):
         empty = tmp_path / "empty.pdf"
         empty.write_bytes(b"")
-        with pytest.raises(Exception):
+        with pytest.raises(PdfiumError):
             triage_pdf(empty)
 
     def test_missing_file_raises(self, tmp_path):
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             triage_pdf(tmp_path / "nope.pdf")
 
 
 class TestEncryption:
     def test_encrypted_pdf_without_password_raises(self, encrypted_pdf):
-        with pytest.raises(Exception):
+        with pytest.raises(PdfiumError):
             triage_pdf(encrypted_pdf)
 
     def test_password_unlocks_the_document(self, encrypted_pdf):

@@ -112,6 +112,20 @@ class PipelineConfig(BaseModel):
                     "ceiling and the cost ceiling; benchmarking it against the default "
                     "routing is how you measure what triage actually costs you.",
     )
+    recover_formatting: bool = Field(
+        True,
+        description="Re-apply bold/italic/underline/strikethrough/headings recovered from the "
+                    "PDF text layer. olmOCR-2 is trained to emit *plain* text and carries none "
+                    "of it; the PDF does. Skipped for pages whose Markdown already has markup "
+                    "(i.e. Docling's), and a no-op on scans, which have no font metadata.",
+    )
+    emit_layout: bool = Field(
+        False,
+        description="Reconstruct block bounding boxes and reading order from the PDF text layer. "
+                    "olmOCR-2 returns no coordinates, so without this nothing downstream can point "
+                    "at where a fact came from. Off by default because it costs a second text-layer "
+                    "pass and most callers only want Markdown.",
+    )
     max_tier2_workers: int = Field(
         4, ge=1, le=64,
         description="Concurrent in-flight page requests. vLLM batches continuously, so a "

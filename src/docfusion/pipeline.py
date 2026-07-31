@@ -19,6 +19,8 @@ import pypdfium2 as pdfium
 from docfusion.config import PipelineConfig
 from docfusion.engines.docling_engine import tier1_extract
 from docfusion.engines.olmocr_client import OlmOCRClient, PageResult
+from docfusion.formatting import FormattingReport, format_page_markdown
+from docfusion.grounding import PageLayout, document_layout
 from docfusion.licenses import assert_compliant
 from docfusion.pdfium_lock import pdfium_guard
 from docfusion.triage.heuristics import PageDecision, Route, triage_pdf
@@ -36,6 +38,12 @@ class DocumentResult:
     fallback_pages: list[int] = field(default_factory=list)
     page_results: dict[int, PageResult] = field(default_factory=dict)
     page_markdown: dict[int, str] = field(default_factory=dict)
+    formatting: dict[int, FormattingReport] = field(default_factory=dict)
+    layout: list[PageLayout] = field(default_factory=list)
+
+    @property
+    def formatting_marks_applied(self) -> int:
+        return sum(r.spans_applied for r in self.formatting.values())
 
     @property
     def page_count(self) -> int:
@@ -64,6 +72,8 @@ class DocumentResult:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "chars": len(self.markdown),
+            "formatting_marks": self.formatting_marks_applied,
+            "layout_blocks": sum(len(p.blocks) for p in self.layout),
         }
 
 
@@ -116,6 +126,54 @@ class DocFusionPipeline:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             return dict(pool.map(ocr_one, page_indices))
 
+    # Markup a page's Markdown may already carry, in which case the text layer
+    # has nothing to add and re-marking would only risk double emphasis.
+    _EXISTING_MARKUP = ("**", "<u>", "~~", "\n#", "<b>", "<strong>", "<em>")
+
+    def _recover_formatting(
+        self, path: Path, page_markdown: dict[int, str]
+    ) -> dict[int, FormattingReport]:
+        """Re-apply typography from the text layer, page by page.
+
+        Mutates ``page_markdown`` in place. Pages whose Markdown already carries
+        markup are left alone — that is Docling's output, which encodes its own
+        structure. Scanned pages have no font metadata and come back unchanged.
+        """
+        if not self.config.recover_formatting or not page_markdown:
+            return {}
+
+        reports: dict[int, FormattingReport] = {}
+        candidates = [
+            index for index, text in page_markdown.items()
+            if text.strip() and not any(m in text for m in self._EXISTING_MARKUP)
+            and not text.lstrip().startswith("#")
+        ]
+        if not candidates:
+            return reports
+
+        with pdfium_guard():
+            pdf = pdfium.PdfDocument(str(path))
+        try:
+            for index in candidates:
+                page = None
+                try:
+                    with pdfium_guard():
+                        page = pdf[index]
+                    marked, report = format_page_markdown(page, page_markdown[index])
+                    page_markdown[index] = marked
+                    reports[index] = report
+                except Exception as exc:  # noqa: BLE001 — formatting is an enhancement
+                    logger.warning("formatting recovery failed on page %d of %s: %s",
+                                   index, path, exc)
+                finally:
+                    if page is not None:
+                        with pdfium_guard():
+                            page.close()
+        finally:
+            with pdfium_guard():
+                pdf.close()
+        return reports
+
     def convert(self, path: str | Path) -> DocumentResult:
         path = Path(path)
         decisions = triage_pdf(path, self.config.thresholds)
@@ -142,7 +200,6 @@ class DocFusionPipeline:
         )
         tier2 = self._run_tier2(path, vlm_pages)
 
-        parts: list[str] = []
         page_markdown: dict[int, str] = {}
         degraded: list[int] = []
         fallbacks: list[int] = []
@@ -158,7 +215,10 @@ class DocFusionPipeline:
             else:
                 text = tier1.get(index, "")
             page_markdown[index] = text
-            parts.append(text)
+
+        formatting = self._recover_formatting(path, page_markdown)
+        layout = document_layout(str(path)) if self.config.emit_layout else []
+        parts = [page_markdown[d.profile.index] for d in decisions]
 
         return DocumentResult(
             path=str(path),
@@ -169,4 +229,6 @@ class DocFusionPipeline:
             fallback_pages=fallbacks,
             page_results=tier2,
             page_markdown=page_markdown,
+            formatting=formatting,
+            layout=layout,
         )
